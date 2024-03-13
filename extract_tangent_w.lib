@@ -1,0 +1,24 @@
+// Procedure extract_tangent_w
+// Input f (vector, polynomial representation of a map germ in the context)
+// Output TW (module, set of df/dc, where c is in the set of the basering parameters) 
+proc extract_tangent_w(vector f)
+{
+	int i, j;
+
+	ring R = basering;
+	def PR = par2varRing(module(f))[1];
+	setring PR;
+	int nv = nvars(R);
+	int np = npars(R);
+	vector f = Id[1][1];
+	module TW;
+	for(i=1;i<=np;i++){
+		TW[i] = diff(f,var(i+nv));
+	}
+	kill nv, np, f;
+	setring R;
+
+	kill i, j;
+
+	return(imap(PR,TW));
+}

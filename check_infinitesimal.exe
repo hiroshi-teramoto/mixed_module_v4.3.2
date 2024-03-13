@@ -1,0 +1,156 @@
+LIB "teachstd.lib";
+LIB "ring.lib";
+LIB "ainvar.lib";
+LIB "zeroset.lib";
+LIB "crypto.lib";
+
+LIB "combine_locally_closed.lib";
+LIB "simplify_constructible.lib";
+LIB "addcons.lib";
+LIB "local_cohomology.lib";
+LIB "cssm_multi_std.lib";
+LIB "extract_tangent_w.lib";
+LIB "gauss_elimination.lib";
+LIB "cgs.lib";
+LIB "check_zeros.lib";
+
+int i,j,k,l;
+
+int nx = 2;
+int ny = 2;
+intmat imat[nx+ny][nx+ny];
+for(i=1;i<=nx+ny;i++){
+	imat[1,i] = -1;
+}
+for(i=1;i<=ny;i++){
+	imat[i+1,ny+nx-i+1] = 1;
+}
+for(i=1;i<=nx-1;i++){
+	imat[i+ny+1,nx-i+1] = 1;
+}
+ring R = (0,c(1..4)), (x(1..nx),y(1..ny)), (M(imat),C);
+
+list X = list();
+for(i=1;i<=ny;i++){
+	X[i] = ideal(y(i));
+	X[i] = std(X[i]);
+}
+X[ny+1] = ideal(0);
+
+// computing eta (for details, see the paper.).
+intmat eta[ny+1][ny+1];
+ideal Xij;
+for(i=1;i<=ny+1;i++){
+	eta[i,i] = i;
+	for(j=i+1;j<=ny+1;j++){
+		Xij = std(reduce(intersect(X[i],X[j]),maxideal(2)));
+		for(k=1;k<=ny+1;k++){ 
+			if(size(reduce(Xij,X[k])) == 0 && size(reduce(X[k],Xij)) == 0){
+				eta[i,j] = k;
+				break;
+			}
+		}
+		eta[j,i] = eta[i,j];	
+	}
+}
+
+// Definitions of E and N, modify this part.
+
+// #1
+// ideal E = c(1), c(2), c(3), c(4);
+// ideal N = 1;
+
+// #2
+// ideal E = 0;
+// ideal N = c(1)*c(4)-c(2)*c(3);
+
+// #3
+// ideal E = c(1)*c(4)-c(2)*c(3);
+// ideal N = c(2)*c(4), c(1)*c(4), c(1)*c(3);
+
+// #4
+ideal E = c(2)*c(4), c(1)*c(4), c(2)*c(3), c(1)*c(3);
+ideal N = c(1), c(2), c(3), c(4);
+
+int K = 1;
+poly f(1..ny);
+f(1) = c(1)*x(1)+c(2)*x(2);
+f(2) = c(3)*x(1)+c(4)*x(2);
+
+vector f;
+for(i=1;i<=ny;i++){
+	f = f + f(i)*gen(i);
+}
+
+// option(prot);
+ideal zero;
+for(i=1;i<=ny;i++){
+	zero = zero, y(i)-f(i);
+}
+zero = compress(zero);
+module TR = x(1)*diff(f,x(1)), x(2)*diff(f,x(1)), x(1)*diff(f,x(2)), x(2)*diff(f,x(2));
+
+TR = compress(TR);
+ideal mx = x(1..nx);
+ideal my = y(1..ny);
+module TR1K = TR + zero*freemodule(ny) + mx^(K+1)*freemodule(ny);
+list Q;
+for(i=1;i<=ny;i++){
+	Q[i] = module(y(i)*gen(i));
+}
+Q[ny+1] = module(vector(0));
+
+def Rc = par2varRing(E)[1];
+setring(Rc);
+ideal E = imap(R,E);
+
+module dE;
+vector vi;
+for(i=nvars(R)+1;i<=nvars(Rc);i++){
+	vi = 0;
+	for(j=1;j<=ncols(E);j++){
+		vi = vi + diff(E[j],var(i))*gen(j);
+	}
+	dE[i-nvars(R)] = vi;
+}
+module tvecs = syz(dE);
+
+setring(R);
+module tvecs = imap(Rc,tvecs);
+module TW = extract_tangent_w(f); 
+
+list L = gauss_elimination(E,N,transpose(tvecs));
+vector p;
+for(i=1;i<=size(L);i++){
+	module C = TW*transpose(L[i][3]);
+	C = simplify(C,2);
+
+	for(j=1;j<=size(C);j++){
+		C[j] = cleardenom(C[j]);
+	}
+
+	list Lg = cssm(X,eta,L[i][1],L[i][2],TR1K,Q);
+	for(j=1;j<=size(Lg);j++){
+                // simplify locally closed set
+                Lg[j][1] = radical_ideal(Lg[j][1]);
+		Lg[j][2] = reduction_by_ideal(Lg[j][2],Lg[j][1]);
+		Lg[j][2] = radical_ideal(Lg[j][2]);
+
+		print("On the locally closed set V(E)\V(N) :");
+		print("E :");
+		Lg[j][1];
+		print("N :");	
+		Lg[j][2];
+		if(size(C) == 0){
+			print("there is no tangent vector to reduce.");
+			break;
+		}
+		for(k=1;k<=size(C);k++){
+			p = reduce_mixed_with_E(X,C[k],Lg[j][3][3],Lg[j][4],Lg[j][3][1]);
+			print("the element"),C[k],print("is reduced to"), p, print(".");
+		}
+	}
+	kill C, Lg;
+}
+
+quit;
