@@ -1,33 +1,20 @@
-Let us explain how to use the library by taking example_codimension_transverse_fold.exe (See 3.1.1 Example (transverse fold) in the paper) as an example.
+Let us explain how to use the library to compute Ae-codimension by taking example_Ae_quotients.exe as an example.
 
 In this example, the definition of the base ring is as follows: 
 
 ```Singular
 nx = 2;
 ny = 2;
-ring R = (0,a), (x(1..nx),y(1..ny)), (M(imat),C);
+ring R = 0, (x(1..nx),y(1..ny)), (M(imat),C);
 ```
 
-In this implementation, all the parameters in the ring, "a" in the example above, are treated as parameters in comprehensive standard system. The set of all the variables is {x(1..nx), y(1..ny)}, which corresponds to $\lbrace x_1, x_2, y_1, y_2 \rbrace$ in the paper. `imat` is a matrix of integer entries to specify the monomial ordering. In this example, `imat` is a $4 \times 4$ matrix,
+The set of all the variables is {x(1..nx), y(1..ny)}. In this example, `x` indicates the source variable of dimension `nx` and `y` indicates the target variable of dimension `ny`. `imat` is a matrix of integer entries to specify the monomial ordering. In this example, `imat` is a $(nx+ny) \times (nx+ny)$ matrix. In this example, `imat` specifies the negative degree lexicographical order satisfying $x_1 \prec \cdots \prec x_{nx} \prec y_1 \prec \cdots \prec y_{ny}$. For the detail of the matrix ordering, please refer to [B.2.6. Matrix orderings](https://www.singular.uni-kl.de/Manual/4-0-3/sing_896.htm). The command `(M(imat), C)` in the end of the ring definition specifies the module ordering on the top of the monomial ordering. Specifically, `C` represents the term over position ordering satisfying $\left( 1, 0 \right) \prec \left( 0, 1 \right)$. For detail, please refer to [3.3.3 Term orderings](https://www.singular.uni-kl.de/Manual/4-0-3/sing_31.htm).
 
-$$
-\begin{pmatrix}
--1 & -1 & -1 & -1 \\
-0 & 0 & 0 & 1 \\
-0 & 0 & 1 & 0 \\
-0 & 1 & 0 & 0
-\end{pmatrix}
-$$
-
-This matrix specifies the negative degree lexicographical order satisfying $x_1 \prec x_2 \prec y_1 \prec y_2$. For the detail of the matrix ordering, please refer to [B.2.6. Matrix orderings](https://www.singular.uni-kl.de/Manual/4-0-3/sing_896.htm). The command `(M(imat), C)` in the end of the ring definition specifies the module ordering on the top of the monomial ordering. Specifically, `C` represents the term over position ordering satisfying $\left( 1, 0 \right) \prec \left( 0, 1 \right)$. For detail, please refer to [3.3.3 Term orderings](https://www.singular.uni-kl.de/Manual/4-0-3/sing_31.htm).
-
-First, you need to specify the family of variables $(X_i)_{i \in J}$ characterizing the structure of a mixed-module you want to manipulate. In this implementation, $X_1$ is the set of all the variables in the base ring. In this example, that is {x(1..nx), y(1..ny)}, where x(i) and y(j) correspond to $x_i$ and $y_i$ in the paper. You need to specify $X_2$, $X_3$, and $X_4$. In the current implementation, X[i-1] = $X_i$ and the list of variables should be of type ideal. For example, 
+First, you need to specify the family of variables $(X_i)_{i \in J}$ characterizing the structure of a mixed-module you want to manipulate. In this implementation, $X_1$ is the set of all the variables in the base ring. In this example, that is {x(1..nx), y(1..ny)}. You need to specify $X_2$. In the current implementation, X[i-1] = $X_i$ and the list of variables should be of type ideal. In this example, we want to compute $\mathcal{A}_e$-codimension of a map-germ $f \colon \left( \mathbb{R}^{nx}, 0 \right) \rightarrow \mathbb{R}^{ny}$, which is the codimension of the mixed-module $tf \left( \theta_{nx} \right) + \omega f \left( \theta_{ny} \right)$, where the first component $tf \left( \theta_{nx} \right)$ is $\mathcal{E}_{nx}$-module and the second component is $\mathcal{E}_{ny}$-module through $f$. To express the algebraic structure of the second component, let `X[1]` be the set of the target variables as, 
 
 ```Singular
 list X = list();
-X[1] = ideal(y[1]);
-X[2] = ideal(y[2]);
-X[3] = ideal(0); // this correspond $X_3 = \emptyset$
+X[1] = ideal(y(1..ny);
 ```
 
 In the subsequent lines, $\eta$ in the paper (See 2. Setting in the paper) is computed for the given X[1], X[2], and X[3]. For example, if $X[1] \cap X[2] = X[3]$ holds, then eta[1,2] = 3.
