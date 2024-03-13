@@ -55,7 +55,7 @@ Finally, you are ready to compute comprehensive standard system for $(M_i)_{i \i
 > ```
 > | Parameter | Description |
 > | --------- | ----------- |
-> | `X` | family of variables (Note that X[i-1] = $X_i$ in the paper) |
+> | `X` | family of variables (Note that $X[i-1]$ corresponds to $X_i$ in the paper) |
 > | `eta` ( $\eta$ ) | matrix of positive integer entries that satisfies $X[i] \cap X[j] = X[\eta[i,j]]$ for all $i, j$ |
 > | `E`, `N` | ideals to specify the parameter range $V \left( E \right) \setminus V \left( N \right)$ in which comprehensive standard system is computed |
 > | `TR1K` | $M_1$ in the paper |
