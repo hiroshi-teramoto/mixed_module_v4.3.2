@@ -58,11 +58,7 @@ proc addcons_one_level(list L)
 				Ns = intersect(Ns,L[i][1]);
 			}
 		}
-
-		// sat has a problem when Es = Ns = 0
-		if(size(Es) != 0 || size(Ns) != 0){
-			N = intersect(N,sat(Es,Ns));
-		}
+		N = intersect(N,sat(Es,Ns));
 	}
 
 	// removing V(E)\V(N) from L
