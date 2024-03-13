@@ -1,7 +1,7 @@
 # mixed_module_v4.3.2
-The mixed algorithm implemented in the latest version of Singular (v.4.3.2) of the paper [Comprehensive Standard System for Generalized Mixed Module and its Application to Singularity Theory](https://www.worldscientific.com/doi/abs/10.1142/S0219498824502219?journalCode=jaa) by Hiroshi Teramoto and Katsusuke Nabeshima (In what follows, we denote this paper as the paper.)
+The mixed algorithm implemented in the latest version of Singular (v.4.3.2) of the paper [Comprehensive Standard System for Generalized Mixed Module and its Application to Singularity Theory](https://www.worldscientific.com/doi/abs/10.1142/S0219498824502219?journalCode=jaa) by Hiroshi Teramoto and Katsusuke Nabeshima (In what follows, we denote this paper as the paper.). We thank 
 
-To use the libraries, download all the files and place them into a single directory. You will need Singular installed on your machine. We have prepared three examples to demonstrate the libraries:
+To use the libraries, download all the files and place them into a single directory. You will need Singular installed on your machine. We have prepared four examples to demonstrate the libraries:
 
 * [example_codimension_transverse_fold.exe](https://github.com/hiroshi-teramoto/mixed_module_v4.3.2/blob/main/example_codimension_transverse_fold.md)
   - See 3.1.1 Example (transverse fold) in the paper
