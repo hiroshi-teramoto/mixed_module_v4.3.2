@@ -1,4 +1,4 @@
-Let us explain how to use the library to compute the quotient of the Ae-tangent space of a map-germ $f \colon \left( \mathbb{R}^{nx}, 0 \right) \rightarrow \left( \mathbb{R}^{ny}, 0 \right)$ by taking example_Ae_quotients.exe as an example.
+Let us explain how to use the library to compute the quotient of the $\mathcal{A}_e$-tangent space of a map-germ $f \colon \left( \mathbb{R}^{nx}, 0 \right) \rightarrow \left( \mathbb{R}^{ny}, 0 \right)$ by taking example_Ae_quotients.exe as an example.
 
 In this example, the definition of the base ring is as follows: 
 
