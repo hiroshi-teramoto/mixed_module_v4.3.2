@@ -17,7 +17,7 @@ list X = list();
 X[1] = ideal(y(1..ny);
 ```
 
-In the subsequent lines, $\eta$ in the paper (See 2. Setting in the paper) is computed for the given X[1], X[2], and X[3]. For example, if $X[1] \cap X[2] = X[3]$ holds, then eta[1,2] = 3.
+In the subsequent lines, $\eta$ in the paper (See 2. Setting in the paper) is set. In this example, there is only one components and eta[1,1] = 1.
 
 Ideals $E$ and $N$ specify the entire range of parameters $V(E) \setminus V(N)$ in which comprehensive standard system is computed, where $V \left( E \right)$ and $V \left( N \right)$ are the zero sets of $E$ and $N$, respectively. Since the ideals are supposed to specify parameter ranges, they should only contain parameters as variables. If you want to compute a comprehensive standard system for all the parameter range, set 
 
@@ -32,10 +32,8 @@ In the subsequent lines, generators of each component of the mixed module is spe
 
 $M_1$ = TR1K;
 $M_2$ = Q[1];
-$M_3$ = Q[2];
-$M_4$ = Q[3];
 
-Finally, you are ready to compute comprehensive standard system for $(M_i)_{i \in \{ 1,2,3,4 \}}$. $M_1$ is supposed to have finite $K$-codimension. You can compute that by the following command (implemented in cssm_multi_v2.lib).
+Finally, you are ready to compute comprehensive standard system for $(M_i)_{i \in \{ 1,2 \}}$. $M_1$ is supposed to have finite $K$-codimension. You can compute that by the following command (implemented in cssm_multi_std.lib).
 
 > ```Singular
 > list Lg = cssm(X,eta,E,N,TR1K,Q);
@@ -61,9 +59,9 @@ Finally, you are ready to compute comprehensive standard system for $(M_i)_{i \i
 >  [i][4][j]: $S^{(j+1)}$ in the paper
 > ```
 
-The comprehensive mixed-standard system `Lg` can be used in the following functions implemented in cssm_multi_v2.lib:
+The comprehensive mixed-standard system `Lg` can be used in the following functions implemented in cssm_multi_std.lib:
 > ```Singular
-> reduce_mixed_with_E(list X, vector p, module Nc, list Q, ideal E)
+> kbase_mixed(list X, vector p, module Nc, list Q, ideal E)
 > ```
 > | Parameter | Description |
 > | --------- | ----------- |
