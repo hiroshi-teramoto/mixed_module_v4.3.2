@@ -14,7 +14,7 @@ First, you need to specify the family of variables $`\left( X_i \right)_{i \in J
 
 ```Singular
 list X = list();
-X[1] = ideal(y(1..ny);
+X[1] = ideal(y(1..ny));
 ```
 
 In the subsequent lines, $\eta$ in the paper (See 2. Setting in the paper) is set. In this example, there is only one components and eta[1,1] = 1.
