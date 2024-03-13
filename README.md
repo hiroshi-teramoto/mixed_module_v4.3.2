@@ -1,5 +1,5 @@
 # mixed_module_v4.3.2
-The mixed algorithm implemented in the latest version of Singular (v.4.3.2) of the paper [Comprehensive Standard System for Generalized Mixed Module and its Application to Singularity Theory](https://www.worldscientific.com/doi/abs/10.1142/S0219498824502219?journalCode=jaa) by Hiroshi Teramoto and Katsusuke Nabeshima (In what follows, we denote this paper as the paper.). We thank Prof. Raúl Oset Sinha and Dr. Ignacio Breva Ribes in University of Valencia for providing many examples to test the code, helping to improve efficiency and to fix bugs of this code.
+The mixed algorithm implemented in the latest version of Singular (v.4.3.2) of the paper [Comprehensive Standard System for Generalized Mixed Module and its Application to Singularity Theory](https://www.worldscientific.com/doi/abs/10.1142/S0219498824502219?journalCode=jaa) by Hiroshi Teramoto and Katsusuke Nabeshima (In what follows, we denote this paper as the paper.). We thank Prof. Raúl Oset Sinha and Dr. Ignacio Breva Ribes in University of Valencia for providing us many examples to test the code, helping to improve efficiency and to fix bugs of this code.
 
 To use the libraries, download all the files and place them into a single directory. You will need Singular installed on your machine. We have prepared four examples to demonstrate the libraries:
 
