@@ -9,9 +9,9 @@ To use the libraries, download all the files and place them into a single direct
   - See 3.1.2 Example (beak to beak) in the paper
 * [example_divergent_diagram_j1.exe](https://github.com/hiroshi-teramoto/mixed_module_v4.3.2/blob/main/example_divergent_diagram_j1.md)
   - See 4.1.1 Example: Mather's lemma
-* [example_complete_transversal.exe](https://github.com/hiroshi-teramoto/mixed_module_v.4.3.2/blob/main/example_complete_transversal.md)
+* [example_complete_transversal.exe](https://github.com/hiroshi-teramoto/mixed_module_v4.3.2/blob/main/example_complete_transversal.md)
   - See 4.1.2 Example: [complete transversal](https://iopscience.iop.org/article/10.1088/0951-7715/10/1/017) (with the degree filtration for class 3 in Table.~1 in the paper)
-* [example_Ae_quotients.exe](https://github.com/hiroshi-teramoto/mixed_module_v.4.3.2/blob/main/example_Ae_codimension.md)
+* [example_Ae_quotients.exe](https://github.com/hiroshi-teramoto/mixed_module_v4.3.2/blob/main/example_Ae_codimension.md)
   - Examples to illustrate the computation of the quotients of Ae-tangent space (coming soom!)
 
 To run the codes, in the directory, type 
