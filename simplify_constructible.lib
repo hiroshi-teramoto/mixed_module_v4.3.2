@@ -1,0 +1,73 @@
+// LIB "combine_locally_closed.lib";
+
+// This program is to simplify constructible sets
+// in the list Lin
+proc simplify_constructible(list Lin)
+{
+	if(size(Lin) <= 1){
+		return(Lin);
+	}
+	else{
+		int i, j, k; // indices for incliment
+		list L;
+		for(i=1;i<=size(Lin);i++){
+			L = L + list(list(i,Lin[i]));
+		}
+		list L_pair;
+		for(i=1;i<=size(L);i++){
+			for(j=i+1;j<=size(L);j++){
+				L_pair = L_pair + list(list(i,j));
+			}
+		}
+
+		ideal E1, N1, E2, N2;
+		list Ltemp;
+		int ind1, ind2, indn;
+		int key1, key2;
+		int size_L_pair;
+		while(size(L_pair) != 0){
+			ind1 = L_pair[1][1];
+			ind2 = L_pair[1][2];
+			L_pair = delete(L_pair,1);
+
+			for(i=1;i<=size(L);i++){
+				if(ind1 == L[i][1]){
+					E1 = L[i][2][1];
+					N1 = L[i][2][2];
+					key1 = i;
+				}
+				if(ind2 == L[i][1]){
+					E2 = L[i][2][1];
+					N2 = L[i][2][2];
+					key2 = i;
+				}
+			}
+			Ltemp = combine_locally_closed(E1,N1,E2,N2);	
+
+			if(Ltemp[1]){
+				indn = L[size(L)][1]+1;
+				L = delete(L,key2);
+				L = delete(L,key1);
+				L[size(L)+1] = list(indn,list(Ltemp[2],Ltemp[3]));
+
+				for(i=1;i<=size(L)-1;i++){
+					L_pair = L_pair + list(list(L[i][1],indn));
+				}
+
+				// remove all the pairs include ind1 or ind2
+				size_L_pair = size(L_pair);
+				for(i=size_L_pair;i>=1;i--){
+					if(L_pair[i][1] == ind1 || L_pair[i][2] == ind1 || L_pair[i][1] == ind2 || L_pair[i][2] == ind2){
+						L_pair = delete(L_pair,i);
+					}
+				}
+			}
+		}
+
+		list Lresult;
+		for(i=1;i<=size(L);i++){
+			Lresult[i] = L[i][2];
+		}
+		return(Lresult);
+	}
+}

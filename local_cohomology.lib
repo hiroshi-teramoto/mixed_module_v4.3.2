@@ -1,0 +1,957 @@
+///////////////////////////////////////////////////////////////////////////////
+version="version boundary.lib 4.0.1.1 Dec_2014 "; //
+category="Commutative Algebra";
+info="
+LIBRARY:  boundary.lib   provide a boundary of I 
+AUTHORS:  Hiroshi Teramoto,     teramoto@es.hokudai.ac.jp
+
+PROCEDURES:
+ boundary(I);              provides a boundary of I
+";
+///////////////////////////////////////////////////////////////////////////////
+
+proc boundary (list #)
+"USAGE:   boundary(I); I ideal or module.
+RETURN:   provides the boundary of I 
+NOTE:
+THEORY:
+EXAMPLE:
+"
+{
+	int i,j,k;
+	if(size(#) != 1 ){
+		ERROR("Check the number of indices of boundary!");
+	}
+	if(typeof(#[1]) == "ideal"){
+		ideal I = #[1];
+		list Ib;
+		for(i=1;i<=ncols(I);i++){
+			if(I[i] != 0){
+				for(j=1;j<=nvars(basering);j++){
+					poly temp = I[i]*var(j);
+					if(!containedQ(I,temp) && !containedQ(Ib,temp)){
+						Ib = insert(Ib,temp);
+					}
+					kill temp;
+				}
+			}
+		}
+		if(size(I) == 0){
+			Ib = ideal(1);
+		}
+		return(Ib);
+	}
+	if(typeof(#[1]) == "module"){
+		module I = #[1];
+		list Ib;
+		for(i=1;i<=ncols(I);i++){
+			if(I[i] != 0){
+				for(j=1;j<=nvars(basering);j++){
+					vector temp = I[i]*var(j);
+					if(!containedQ(I,temp) && !containedQ(Ib,temp)){
+						Ib = insert(Ib,temp);
+					}
+					kill temp;
+				}
+			}
+		}
+		return(Ib);
+	}
+}
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+version="version psim.lib 4.0.1.1 Dec_2014 "; //
+category="Commutative Algebra";
+info="
+LIBRARY:  psim.lib   Compute PsiM 
+AUTHORS:  Hiroshi Teramoto,     teramoto@kansai-u.ac.jp
+
+PROCEDURES:
+ psim(L,I);               computes PsiM
+";
+///////////////////////////////////////////////////////////////////////////////
+
+proc psim (list #)
+"USAGE:   psim(I); # = (list L, I ideal) or (list L, I module).
+RETURN:   PsiM of I on the constructible set L (L[1]=(E,N),...)
+NOTE:
+THEORY:
+EXAMPLE:
+"
+{
+	int i,j,k;
+	if(size(#) != 2 || typeof(#[1]) != "list"){
+		ERROR("Check the indices in psim!");
+	}
+
+	if(typeof(#[2]) == "ideal"){
+		list L = #[1];
+		ideal I = #[2];
+		// construct an ideal A
+		ideal A;
+		for(i=1;i<=ncols(I);i++){
+			for(j=1;j<=size(I[i]);j++){
+				A = A, I[i][j];
+			}
+		}	
+		// calculate comprehensive standard basis of A on each stratum
+		list Lq;
+		list Lcgs, Lcomb;
+		for(i=1;i<=size(L);i++){
+			Lcgs = cgs_ideal(L[i][1],L[i][2],A);
+			for(j=1;j<=size(Lcgs);j++){
+				ideal kb = kbase(Lcgs[j][3]);
+				int is_new = 1;
+				for(k=1;k<=size(Lcomb);k++){
+					if(EqualModules(Lcomb[k][1],kb)){
+						is_new = 0;
+						Lcomb[k][2] = insert(Lcomb[k][2],list(Lcgs[j][1],Lcgs[j][2]));
+						break;
+					}
+				}
+				if(is_new){
+					Lcomb = insert(Lcomb,list(kb,list(list(Lcgs[j][1],Lcgs[j][2]))));
+				}
+				kill kb, is_new;
+			}
+		}
+		for(i=1;i<=size(Lcomb);i++){
+			Lcomb[i][2] = addcons(Lcomb[i][2]);
+			/*
+			for(j=1;j<=size(Lcomb[i][2]);j++){
+				Lcomb[i][2][j][1] = radical_ideal(Lcomb[i][2][j][1]);
+				Lcomb[i][2][j][2] = radical_ideal(Lcomb[i][2][j][2]);
+			}
+			*/
+		}
+
+		list Lresult;
+		for(i=1;i<=size(Lcomb);i++){
+			for(j=1;j<=size(Lcomb[i][2]);j++){
+				Lresult = insert(Lresult,list(Lcomb[i][2][j][1],Lcomb[i][2][j][2],Lcomb[i][1]));
+			}
+		}
+		return(Lresult);
+	}
+	if(typeof(#[2]) == "module"){
+		list L = #[1];
+		module I = #[2];
+		// construct a module A
+		module A;
+		for(i=1;i<=ncols(I);i++){
+			vector temp = I[i];
+			while(temp != 0){
+				A = A, lead(temp);
+				temp = temp - lead(temp);
+			}
+			kill temp;
+		}
+
+		// calculate comprehensive standard basis of A on each stratum
+		list Lq;
+		list Lcgs, Lcomb;
+		for(i=1;i<=size(L);i++){
+			Lcgs = cgs_module(L[i][1],L[i][2],A);
+			for(j=1;j<=size(Lcgs);j++){
+				module kb = kbase(Lcgs[j][3]);
+				int is_new = 1;
+				for(k=1;k<=size(Lcomb);k++){
+					if(EqualModules(Lcomb[k][1],kb)){
+						is_new = 0;
+						Lcomb[k][2] = insert(Lcomb[k][2],list(Lcgs[j][1],Lcgs[j][2]));
+						break;
+					}
+				}
+				if(is_new){
+					Lcomb = insert(Lcomb,list(kb,list(list(Lcgs[j][1],Lcgs[j][2]))));
+				}
+				kill kb, is_new;
+			}
+		}
+
+		for(i=1;i<=size(Lcomb);i++){
+			Lcomb[i][2] = addcons(Lcomb[i][2]);
+			/*
+			for(j=1;j<=size(Lcomb[i][2]);j++){
+				Lcomb[i][2][j][1] = radical_ideal(Lcomb[i][2][j][1]);
+				Lcomb[i][2][j][2] = radical_ideal(Lcomb[i][2][j][2]);
+			}
+			*/
+		}
+
+		list Lresult;
+		for(i=1;i<=size(Lcomb);i++){
+			for(j=1;j<=size(Lcomb[i][2]);j++){
+				Lresult = insert(Lresult,list(Lcomb[i][2][j][1],Lcomb[i][2][j][2],Lcomb[i][1]));
+			}
+		}
+		return(Lresult);
+	}
+}
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+version="version star.lib 4.0.1.1 Dec_2014 "; //
+category="Commutative Algebra";
+info="
+LIBRARY:  star.lib   calculate star product between two polynomials or vectors 
+AUTHORS:  Hiroshi Teramoto,     teramoto@es.hokudai.ac.jp
+
+PROCEDURES:
+ star(poly p, poly q);              p * q (q is supposed to be in the dual)
+ star(vector p, vector q);              p * q (q is supposed to be in the dual)
+";
+///////////////////////////////////////////////////////////////////////////////
+
+proc star (list #)
+"USAGE:   star(p,q); p, q poly or p, q vector
+RETURN:   calculate p*q
+NOTE:
+THEORY:
+EXAMPLE:
+"
+{
+	if(size(#) != 2){
+		ERROR("Check the indices of star!");
+	}
+
+	int i;
+	if(typeof(#[1]) == "poly" && typeof(#[2]) == "poly"){
+		poly p = #[1];
+		poly q = #[2];
+
+		poly result = 0;
+		for(i=1;i<=size(p);i++){
+			result = result + leadcoef(p[i])*q/leadmonom(p[i]);
+		}
+		kill p, q;
+		return(result);
+	}
+	if(typeof(#[1]) == "vector" && typeof(#[2]) == "vector"){
+		vector p = #[1];
+		vector q = #[2];
+
+		poly result = 0;
+		vector ptemp = p;
+		while(ptemp != 0){
+			vector qtemp = q;
+			intvec ep = leadexp(ptemp);
+			while(qtemp != 0){
+				intvec eq = leadexp(qtemp);
+				if(ep[size(ep)] == eq[size(eq)]){
+					result = result + leadcoef(ptemp)*lead(qtemp)[eq[size(eq)]]/leadmonom(ptemp)[ep[size(ep)]];
+				}
+				qtemp = qtemp - lead(qtemp);
+				kill eq;	
+			}
+			ptemp = ptemp - lead(ptemp);
+			kill qtemp, ep;
+		} 
+		kill p, q, ptemp;
+		return(result);
+	}
+	if(typeof(#[1]) == "poly" && typeof(#[2]) == "vector"){
+		poly p = #[1];
+		vector q = #[2];
+
+		vector result = 0;
+		for(i=1;i<=size(p);i++){
+			result = result + leadcoef(p[i])*q/leadmonom(p[i]);
+		}
+		kill p, q;
+		return(result);
+	}
+}
+///////////////////////////////////////////////////////////////////////////////
+
+proc leadmonomial(vector p)
+{
+	intvec ep = leadexp(p);
+	return(leadmonom(p)[ep[size(ep)]]);
+}
+
+proc last(list #)
+{
+	if(size(#) != 1 || (typeof(#[1]) != "poly" && typeof(#[1]) != "vector")){
+		ERROR("Check the indices of last!");
+	}
+	def p = #[1];
+	def ptemp = p;
+	while(ptemp != 0){
+		p = lead(ptemp);
+		ptemp = ptemp - lead(ptemp);
+	}
+	return(p);
+}
+
+proc standard_cohom(list #)
+{
+	if(size(#) != 3){
+		ERROR("Check the indices of standard_cohom!");
+	}
+
+	int j, k, l;
+	if(typeof(#[1]) == "ideal" && typeof(#[2]) == "ideal" && typeof(#[3]) == "ideal"){
+		ideal FL = #[1];
+		ideal LList = #[2];
+		ideal HJ = #[3];
+		ideal standard;
+		for(j=1;j<=ncols(FL);j++){
+			if(!containedQ(LList,FL[j])){
+				standard = standard + ideal(FL[j]);
+			}
+			else{
+				poly ptemp = FL[j];
+				for(k=1;k<=ncols(HJ);k++){
+					for(l=1;l<size(HJ[k]);l++){
+						if(FL[j] == leadmonom(HJ[k][l])){
+							ptemp = ptemp - leadcoef(HJ[k][l])*HJ[k][size(HJ[k])];
+							break;
+						}
+					}
+				}
+				standard = standard + ptemp;
+				kill ptemp;
+			}
+		}
+		attrib(standard,"isSB",1);
+		return(standard);
+	}
+	if(typeof(#[1]) == "module" && typeof(#[2]) == "module" && typeof(#[3]) == "module"){
+		module FL = #[1];
+		module LList = #[2];
+		module HJ = #[3];
+		module standard;
+		for(j=1;j<=ncols(FL);j++){
+			if(!containedQ(LList,FL[j])){
+				standard = standard + module(FL[j]);
+			}
+			else{
+				vector ptemp = FL[j];
+				for(k=1;k<=ncols(HJ);k++){
+					vector HJk = HJ[k];
+					while(HJk != 0){
+						if(FL[j] == leadmonom(HJk)){
+							ptemp = ptemp - leadcoef(HJk)*last(HJ[k]);
+							break;
+						}
+						HJk = HJk - lead(HJk);
+					}
+					kill HJk;
+				}
+				standard = standard + ptemp;
+				kill ptemp;
+			}
+		}
+		attrib(standard,"isSB",1);
+		return(standard);
+	}
+}
+
+proc reduce_cohom(list #)
+{
+	int i, j, k;
+	if(size(#) != 2){
+		ERROR("check the number of indices!");
+	}
+	if((typeof(#[1]) == "poly" || typeof(#[1]) == "ideal") && typeof(#[2]) == "ideal"){
+		if(typeof(#[1]) == "poly"){
+			poly h = #[1];
+			ideal HJ = #[2];
+
+			poly resi = 0;
+			for(i=1;i<=size(h);i++){
+				for(j=1;j<=ncols(HJ);j++){
+					for(k=1;k<=size(HJ[j]);k++){
+						if(leadmonom(h[i]) == leadmonom(HJ[j][k])){
+							resi = resi + leadcoef(h[i])*leadcoef(HJ[j][k])*last(HJ[j]);
+							break;
+						}
+					}
+				}
+			}
+			kill h, HJ;
+			return(resi);
+		}
+		else{
+			ideal I = #[1];
+			ideal Ires;
+			for(i=1;i<=ncols(I);i++){
+				Ires[i] = reduce_cohom(I[i],#[2]); 
+			}
+			kill I;
+			return(Ires);
+		}
+	}
+	if((typeof(#[1]) == "vector" || typeof(#[1]) == "module") && typeof(#[2]) == "module"){
+		if(typeof(#[1]) == "vector"){
+			vector h = #[1];
+			module HJ = #[2];
+
+			vector resi = 0;
+			vector htemp = h;
+			while(htemp != 0){
+				for(i=1;i<=ncols(HJ);i++){
+					vector HJi = HJ[i];
+					while(HJi != 0){
+						if(leadmonom(htemp) == leadmonom(HJi)){
+							resi = resi + leadcoef(htemp)*leadcoef(HJi)*last(HJ[i]);
+						}
+						HJi = HJi - lead(HJi);
+					}
+					kill HJi;
+				}
+				htemp = htemp - lead(htemp);
+			}
+			kill h, htemp, HJ;
+			return(resi);
+		}
+		else{
+			module I = #[1];
+			module Ires;
+			for(i=1;i<=ncols(I);i++){
+				Ires[i] = reduce_cohom(I[i],#[2]); 
+			}
+			kill I;
+			return(Ires);
+		}
+	}
+}
+
+// this program returns a list of larger polynomials than p not in HList
+proc larger(list #)
+{
+	int i, j;
+	if(typeof(#[1]) == "poly"){
+		poly p = #[1];
+		ideal LTp;
+		int d = 0;
+		ideal md;
+		int all_smaller = 0;
+		while(!all_smaller){
+			md = maxideal(d);
+			all_smaller = 1;
+			for(i=1;i<=ncols(md);i++){
+				if(md[i] > p){
+					all_smaller = 0;
+					LTp = LTp, md[i];
+				}
+			}
+			d++;
+		}
+		LTp = compress(LTp);
+		return(LTp);
+	}
+	if(typeof(#[1]) == "vector" && typeof(#[2]) == "int"){
+		vector p = #[1];
+		int df = #[2];
+		module LTp;
+		int d = 0;
+		module md;
+		int all_smaller = 0;
+		while(!all_smaller){
+			md = maxideal(d)*freemodule(df);
+			all_smaller = 1;
+			for(i=1;i<=ncols(md);i++){
+				if(md[i] > p){
+					all_smaller = 0;
+					LTp = LTp, md[i];
+				}
+			}
+			d++;
+		}
+		LTp = compress(LTp);
+		return(LTp);
+	}
+}
+
+proc calculate_dpsi(list #)
+{
+	int k, l, m;
+	if(size(#) != 3){
+		ERROR("Check the indices of calculate_dpsi!");
+	}
+
+	if(typeof(#[1]) == "ideal" && typeof(#[2]) == "ideal" && typeof(#[3]) == "ideal"){
+		matrix dpsi;
+		ideal I = #[1];
+		ideal lower = #[2];
+		ideal basis = #[3];
+
+		for(k=1;k<=size(I);k++){
+			matrix mk[size(basis)][size(lower)];
+			for(l=1;l<=size(lower);l++){
+				poly pkl = star(I[k],lower[l]);
+				while(pkl != 0){
+					for(m=1;m<=size(basis);m++){
+						if(leadmonom(pkl) == basis[m]){
+							mk[m,l] = leadcoef(pkl);
+							break;
+						}
+					}
+					pkl = pkl - lead(pkl);
+				}	
+				kill pkl;
+			}
+			dpsi = transpose(concat(transpose(dpsi),transpose(mk)));
+			kill mk;
+		}
+		return(dpsi);
+	}
+	if(typeof(#[1]) == "module" && typeof(#[2]) == "module" && typeof(#[3]) == "ideal"){
+		matrix dpsi;
+		module I = #[1];
+		module lower = #[2];
+		ideal basis = #[3];
+
+		for(k=1;k<=size(I);k++){
+			matrix mk[size(basis)][size(lower)];
+			for(l=1;l<=size(lower);l++){
+				poly pkl = star(I[k],lower[l]);
+				while(pkl != 0){
+					for(m=1;m<=size(basis);m++){
+						if(leadmonom(pkl) == basis[m]){
+							mk[m,l] = leadcoef(pkl);
+							break;
+						}
+					}
+					pkl = pkl - lead(pkl);
+				}	
+				kill pkl;
+			}
+			dpsi = transpose(concat(transpose(dpsi),transpose(mk)));
+			kill mk;
+		}
+		return(dpsi);
+	}
+}
+
+proc local_cohomology(list #)
+{
+	if(size(#) != 3){
+		ERROR("Check the indices of local_cohomology!");
+	}
+
+	// rewrite this part using gauss_elimination_gb
+	if(typeof(#[1]) == "ideal" && typeof(#[2]) == "ideal" && typeof(#[3]) == "ideal"){
+		ideal E = #[1];
+		ideal N = #[2];
+		ideal I = #[3];
+
+		list L = list(list(E,N)); // initial constructible set
+
+		int i,j,k,l,m;
+		list CList;
+		list HList;
+		list LList;
+		list FL;
+		list HJ;
+
+		list PsiM = psim(L,I);
+		for(i=1;i<=size(PsiM);i++){
+			list CListi3 = boundary(PsiM[i][3]);
+			if(size(CListi3) == 0){	
+				CListi3 = insert(CListi3,1);
+			}
+			CListi3 = bubblesort(CListi3);
+
+			FL = insert(FL,list(PsiM[i][1],PsiM[i][2],ideal(CListi3[1])));
+			list CListi3red;
+			for(j=1;j<=size(CListi3);j++){
+				if(reduce(CListi3[j],CListi3[1]) != 0){
+					CListi3red = insert(CListi3red,CListi3[j]);
+				}
+			}
+			CListi3red = bubblesort(CListi3red);
+
+			HJ = insert(HJ,list(PsiM[i][1],PsiM[i][2],PsiM[i][3])); 
+			HList = insert(HList,list(PsiM[i][1],PsiM[i][2],PsiM[i][3])); 
+			CList = insert(CList,list(PsiM[i][1],PsiM[i][2],CListi3red));
+			LList = insert(LList,list(PsiM[i][1],PsiM[i][2],ideal()));
+
+			kill CListi3, CListi3red;
+		}
+
+		int finished = 0;
+		while(!finished){
+			for(i=1;i<=size(CList);i++){
+				if(size(CList[i][3]) != 0){
+					poly can = CList[i][3][1];
+
+					if(find(option(),"prot") != 0){
+						print("can ="), can;
+					}
+
+					ideal lower = larger(can);
+					for(j=1;j<=ncols(lower);j++){
+						if(containedQ(HList[i][3],lower[j])){
+							lower[j] = 0;
+						}
+						else{
+							poly xl;
+							for(k=1;k<=nvars(basering);k++){
+								xl = star(var(k),lower[j]);
+								if(xl != 0 && !containedQ(HList[i][3],xl) && !containedQ(LList[i][3],xl)){
+									lower[j] = 0;	
+									break;
+								}
+							}
+							kill xl;
+						}
+					}
+					lower = lower, can;
+					lower = compress(lower);
+
+					ideal basis = larger(can), can;
+					basis = compress(basis);
+					matrix dpsi = calculate_dpsi(compress(I),lower,basis);
+
+					list Lg = gauss_elimination_gb(CList[i][1],CList[i][2],dpsi);
+					for(k=1;k<=size(Lg);k++){
+						if(size(Lg[k][4]) == size(lower)-1){
+							// finding a solution of simultaneous linear equations
+							intmat cor[size(lower)][1];
+							for(l=1;l<=nrows(Lg[k][3]);l++){
+								for(m=1;m<=size(lower);m++){
+									if(Lg[k][3][l,m] == 1){
+										cor[m,1] = l;
+										break;
+									}
+								}
+							}
+
+							int izero;
+							for(l=1;l<=size(lower);l++){
+								if(cor[l,1] == 0){
+									izero = l;
+								}
+							}
+
+							vector sol = gen(izero);
+							for(l=1;l<=nrows(cor);l++){
+								if(l != izero){
+									for(m=1;m<=size(lower);m++){
+										if(m != l){
+											sol = sol - Lg[k][3][cor[l,1],m]*sol[m]*gen(l);
+										}
+									}
+								}
+							}
+
+							if(sol[size(lower)] == 0){
+								ERROR("sol[size(lower)] should not be zero");
+							}
+							poly psi = 0; 
+							for(l=1;l<=size(lower);l++){
+								psi = psi + sol[l]*lower[l]/sol[size(lower)];
+							}
+
+							if(find(option(),"prot") != 0){
+								print("sol ="), sol;
+								print("psi ="), psi;
+							}
+
+							ideal LListi3 = LList[i][3];
+							for(l=1;l<=size(lower)-1;l++){
+								if(sol[l] != 0){
+									if(!containedQ(LListi3,lower[l])){	
+										LListi3 = LListi3, lower[l];
+									}
+								}
+							}
+							LListi3 = compress(LListi3);
+							LList = insert(LList,list(Lg[k][1],Lg[k][2],LListi3),size(LList));
+
+							ideal HJi3 = HJ[i][3], psi;
+							HJi3 = compress(HJi3);
+							HJ = insert(HJ,list(Lg[k][1],Lg[k][2],HJi3),size(HJ));
+							ideal HListi3 = HList[i][3], can;
+							HListi3 = compress(HListi3);
+							HList = insert(HList,list(Lg[k][1],Lg[k][2],HListi3),size(HList));
+
+							// add adjacent elements to can to CList 
+							list CList_new = list(Lg[k][1],Lg[k][2],CList[i][3]); 
+							CList_new[3] = delete(CList_new[3],1);
+							poly ptemp;
+							for(l=1;l<=nvars(basering);l++){
+								ptemp = can*var(l);
+								if(!containedQ(CList_new[3],ptemp) && size(reduce(ptemp,std(FL[i][3]))) != 0){
+									CList_new[3] = insert(CList_new[3],ptemp);
+								}
+							}
+							CList_new[3] = bubblesort(CList_new[3]);
+							CList = insert(CList,CList_new,size(CList));
+
+							FL = insert(FL,list(Lg[k][1],Lg[k][2],FL[i][3]),size(FL));
+
+							kill LListi3, HListi3, HJi3, CList_new, ptemp, sol, psi, cor, izero;
+						}
+						else{
+							HJ = insert(HJ,list(Lg[k][1],Lg[k][2],HJ[i][3]),size(HJ));
+							HList = insert(HList,list(Lg[k][1],Lg[k][2],HList[i][3]),size(HList));
+							LList = insert(LList,list(Lg[k][1],Lg[k][2],LList[i][3]),size(LList));
+							list CList_new = list(Lg[k][1],Lg[k][2],list()); 
+							// deleting unnecessary monomials
+							for(l=1;l<=size(CList[i][3]);l++){
+								if(reduce(CList[i][3][l],can) != 0){
+									CList_new[3] = insert(CList_new[3],CList[i][3][l]);
+								}
+							}
+							CList_new[3] = bubblesort(CList_new[3]);
+							CList = insert(CList,CList_new,size(CList));
+
+							list FL_new = list(Lg[k][1],Lg[k][2],FL[i][3]);
+							FL_new[3] = FL_new[3], can;
+							FL_new[3] = compress(FL_new[3]);
+							FL = insert(FL,FL_new,size(FL));
+
+							kill CList_new, FL_new;
+						}
+					}
+					FL = delete(FL,i);
+					HJ = delete(HJ,i);
+					HList = delete(HList,i);
+					CList = delete(CList,i);
+					LList = delete(LList,i);
+
+					kill can, lower, basis, dpsi, Lg; 
+				}
+			}
+
+			finished = 1;
+			for(i=1;i<=size(CList);i++){
+				if(size(CList[i][3]) != 0){
+					finished = 0;
+				}
+			}
+		}
+
+		list Lcgs;
+		for(i=1;i<=size(HJ);i++){
+			ideal sI = standard_cohom(FL[i][3],LList[i][3],HJ[i][3]);
+			Lcgs = insert(Lcgs,list(HJ[i][1],HJ[i][2],sI,HJ[i][3]));
+			kill sI;
+		}
+		return(Lcgs);
+	}
+	if(typeof(#[1]) == "ideal" && typeof(#[2]) == "ideal" && typeof(#[3]) == "module"){
+		ideal E = #[1];
+		ideal N = #[2];
+		module I = #[3];
+
+		list L = list(list(E,N)); // initial constructible set
+
+		int i,j,k,l,m;
+		list CList;
+		list HList;
+		list LList;
+		list FL;
+		list HJ;
+
+		list PsiM = psim(L,I);
+		for(i=1;i<=size(PsiM);i++){
+			list CListi3 = boundary(PsiM[i][3]);
+			for(j=1;j<=nrows(I);j++){
+				int contained = 0;
+				for(k=1;k<=size(CListi3);k++){
+					if(leadexp(CListi3[k])[nvars(basering)+1] == j){
+						contained = 1;
+						break;
+					}
+				}
+				if(!contained){
+					CListi3 = insert(CListi3,gen(j));
+				}
+				kill contained;
+			}
+			CListi3 = bubblesort(CListi3);
+
+			FL = insert(FL,list(PsiM[i][1],PsiM[i][2],module(CListi3[1])));
+			list CListi3red;
+			for(j=1;j<=size(CListi3);j++){
+				if(reduce(CListi3[j],CListi3[1]) != 0){
+					CListi3red = insert(CListi3red,CListi3[j]);
+				}
+			}
+			CListi3red = bubblesort(CListi3red);
+
+			HJ = insert(HJ,list(PsiM[i][1],PsiM[i][2],PsiM[i][3])); 
+			HList = insert(HList,list(PsiM[i][1],PsiM[i][2],PsiM[i][3])); 
+			CList = insert(CList,list(PsiM[i][1],PsiM[i][2],CListi3red));
+			LList = insert(LList,list(PsiM[i][1],PsiM[i][2],module()));
+
+			kill CListi3, CListi3red;
+		}
+
+		int finished = 0;
+		while(!finished){
+			for(i=1;i<=size(CList);i++){
+				if(size(CList[i][3]) != 0){
+					vector can = CList[i][3][1];
+
+					if(find(option(),"prot") != 0){
+						print("can ="), can;
+					}
+
+					module lower = larger(can,nrows(I));
+					for(j=1;j<=ncols(lower);j++){
+						if(containedQ(HList[i][3],lower[j])){
+							lower[j] = 0;
+						}
+						else{
+							// check this part!!!
+							vector xl;
+							for(k=1;k<=nvars(basering);k++){
+								xl = star(var(k),lower[j]);
+								if(xl == 0 || containedQ(HList[i][3],xl) || containedQ(LList[i][3],xl)){
+								}
+								else{
+									lower[j] = 0;
+									break;
+								}
+							}
+							kill xl;
+						}
+					}
+					lower = lower, can;
+					lower = compress(lower);
+
+					ideal basis = larger(leadmonomial(can));
+					basis = basis, leadmonomial(can);
+					basis = compress(basis);
+
+					matrix dpsi = calculate_dpsi(compress(I),lower,basis);
+					list Lg = gauss_elimination_gb(CList[i][1],CList[i][2],dpsi);
+					// list Lg = gauss_elimination(CList[i][1],CList[i][2],dpsi);
+					int pivot;
+					for(k=1;k<=size(Lg);k++){
+						if(size(Lg[k][4]) == size(lower)-1){
+							// finding a solution of simultaneous linear equations
+							intmat cor[size(lower)][1];
+							for(l=1;l<=nrows(Lg[k][3]);l++){
+								for(m=1;m<=size(lower);m++){
+									if(Lg[k][3][l,m] == 1){
+										cor[m,1] = l;
+										break;
+									}
+								}
+							}
+
+							int izero;
+							for(l=1;l<=size(lower);l++){
+								if(cor[l,1] == 0){
+									izero = l;
+								}
+							}
+
+							vector sol = gen(izero);
+							for(l=1;l<=nrows(cor);l++){
+								if(l != izero){
+									for(m=1;m<=size(lower);m++){
+										if(m != l){
+											sol = sol - Lg[k][3][cor[l,1],m]*sol[m]*gen(l);
+										}
+									}
+								}
+							}
+
+							if(sol[size(lower)] == 0){
+								ERROR("sol[size(lower)] should not be zero");
+							}
+
+							vector psi = 0; 
+							for(l=1;l<=size(lower);l++){
+								psi = psi + sol[l]*lower[l]/sol[size(lower)];
+							}
+
+							if(find(option(),"prot") != 0){
+								print("sol ="), sol;
+								print("psi ="), psi;
+							}
+
+							module LListi3 = LList[i][3];
+							for(l=1;l<=size(lower)-1;l++){
+								if(sol[l] != 0){
+									if(!containedQ(LListi3,lower[l])){	
+										LListi3 = LListi3, lower[l];
+									}
+								}
+							}
+							LListi3 = compress(LListi3);
+							LList = insert(LList,list(Lg[k][1],Lg[k][2],LListi3),size(LList));
+
+							module HJi3 = HJ[i][3], psi;
+							HJi3 = compress(HJi3);
+							HJ = insert(HJ,list(Lg[k][1],Lg[k][2],HJi3),size(HJ));
+							module HListi3 = HList[i][3], can;
+							HListi3 = compress(HListi3);
+							HList = insert(HList,list(Lg[k][1],Lg[k][2],HListi3),size(HList));
+
+							// add adjacent elements to can to CList 
+							list CList_new = list(Lg[k][1],Lg[k][2],CList[i][3]); 
+							CList_new[3] = delete(CList_new[3],1);
+							vector ptemp;
+							for(l=1;l<=nvars(basering);l++){
+								ptemp = can*var(l);
+								if(!containedQ(CList_new[3],ptemp) && size(reduce(ptemp,std(FL[i][3]))) != 0){
+									CList_new[3] = insert(CList_new[3],ptemp);
+								}
+							}
+							CList_new[3] = bubblesort(CList_new[3]);
+							CList = insert(CList,CList_new,size(CList));
+
+							FL = insert(FL,list(Lg[k][1],Lg[k][2],FL[i][3]),size(FL));
+
+							kill cor, izero;
+							kill LListi3, HListi3, HJi3, CList_new, ptemp, sol, psi;
+						}
+						else{
+							HJ = insert(HJ,list(Lg[k][1],Lg[k][2],HJ[i][3]),size(HJ));
+							HList = insert(HList,list(Lg[k][1],Lg[k][2],HList[i][3]),size(HList));
+							LList = insert(LList,list(Lg[k][1],Lg[k][2],LList[i][3]),size(LList));
+							list FL_new = list(Lg[k][1],Lg[k][2],FL[i][3]);
+							FL_new[3] = FL_new[3], can;
+							FL_new[3] = compress(FL_new[3]);
+							FL = insert(FL,FL_new,size(FL));
+
+							list CList_new = list(Lg[k][1],Lg[k][2],list()); 
+							// deleting unnecessary monomials
+							for(l=1;l<=size(CList[i][3]);l++){
+								if(reduce(CList[i][3][l],std(FL_new[3])) != 0){
+									CList_new[3] = insert(CList_new[3],CList[i][3][l]);
+								}
+							}
+							CList_new[3] = bubblesort(CList_new[3]);
+							CList = insert(CList,CList_new,size(CList));
+
+							kill CList_new, FL_new;
+						}
+					}
+					FL = delete(FL,i);
+					HJ = delete(HJ,i);
+					HList = delete(HList,i);
+					CList = delete(CList,i);
+					LList = delete(LList,i);
+
+					kill can, lower, basis, dpsi, Lg, pivot; 
+				}
+			}
+
+			finished = 1;
+			for(i=1;i<=size(CList);i++){
+				if(size(CList[i][3]) != 0){
+					finished = 0;
+				}
+			}
+		}
+
+		list Lcgs;
+		for(i=1;i<=size(HJ);i++){
+			module sI = standard_cohom(FL[i][3],LList[i][3],HJ[i][3]);
+			Lcgs = insert(Lcgs,list(HJ[i][1],HJ[i][2],sI,HJ[i][3]));
+			kill sI;
+		}
+		return(Lcgs);
+	}
+}

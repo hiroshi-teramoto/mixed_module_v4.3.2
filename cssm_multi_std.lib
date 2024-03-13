@@ -1,0 +1,498 @@
+proc lcmv(vector v1, vector v2)
+{
+	intvec e1 = leadexp(v1);
+	intvec e2 = leadexp(v2);
+	if(e1[size(e1)] != e2[size(e1)]){
+		return(0);
+	}
+	else{
+		poly lmv1 = leadmonomial(v1);
+		poly lmv2 = leadmonomial(v2);
+		return(lcm(lmv1,lmv2)*gen(e1[size(e1)]));
+	}
+}
+
+proc cssm(list X, intmat eta, ideal Ei, ideal Ni, module TR, list Q)
+{
+	int i,j;
+
+	if(find(option(),"prot") != 0){
+		print("the main program for CSS starts:");
+		print("calculating local cohomology starts:");
+	}
+	list Ls = cgs_module(Ei,Ni,TR);
+	list Lg;
+	for(i=1;i<=size(Ls);i++){
+		list Qc;
+		for(j=1;j<=size(Q);j++){
+			Qc[j] = reduce(Q[j],Ls[i][3],2);
+			Qc[j] = compress(Qc[j]);
+			Qc[j] = elimdenom(Qc[j]);
+		}
+		if(find(option(),"prot") != 0){
+			print("calling CSSMain :");
+		}
+		Lg = Lg + CSSMain(X,eta,Ls[i][1],Ls[i][2],Ls[i],Qc);
+		kill Qc;
+	}
+	return(Lg);
+}
+
+// Q : list of modules
+proc CSSMain(list X, intmat eta, ideal E, ideal N, list Ls, list Q)
+{
+	int i,j,k,l;
+	list Lg;
+
+	if(find(option(),"prot") != 0){
+		print("entering in CSSMain :");
+		print("E :");
+		E;
+		print("N :");
+		N;
+	}
+
+	if(!radical_membership_without_t(E,N)){
+		for(i=1;i<=size(Q);i++){
+			Q[i] = compress(reduction_by_ideal(Q[i],E));
+		}
+
+		if(find(option(),"prot") != 0){
+			print("reduction of Q by E");
+			Q;
+		}
+
+		poly h = 1;
+		for(i=1;i<=size(Q);i++){
+			for(j=1;j<=size(Q[i]);j++){
+				h = h * leadcoef(Q[i][j]);
+			}
+		}
+		def R = basering;
+		def PR = par2varRing(ideal(h))[1];
+		setring PR;
+		list Lh = factorize(Id[1][1],1);
+		if(Lh[1][1] != 1){
+			setring R;
+			list Lh = imap(PR,Lh);
+		}
+		else{
+			setring R;
+			list Lh = list(list(1));
+		}
+
+		h = 1;
+		ideal Ei = E;
+		for(i=1;i<=size(Lh[1]);i++){
+			Ei = E, Lh[1][i];
+			if(find(option(),"prot") != 0){
+				print("calling CSSMain:");
+			}
+			Lg = Lg + CSSMain(X,eta,Ei,h*N,Ls,Q);
+			h = h * Lh[1][i];
+		} 
+
+		if(find(option(),"prot") != 0){
+			print("computing spolys");
+		}
+		vector plcm;
+		vector vs;
+		list P;
+		for(i=1;i<=size(Q);i++){
+			P[i] = list();
+		}
+
+		for(i=1;i<=size(Ls[3]);i++){
+			for(j=1;j<=size(Q);j++){
+				for(k=1;k<=size(Q[j]);k++){
+					plcm = lcmv(lead(Ls[3][i]),lead(Q[j][k]));
+					if(plcm != 0){
+						if(involutive_multiple(X[j],plcm,lead(Q[j][k]))){
+							vs = spoly(Ls[3][i],Q[j][k],1);
+							if(vs != 0){
+								P[j] = insert(P[j],vs);
+							}
+						}
+					}
+				}
+			}
+		}
+		for(i=1;i<=size(Q);i++){
+			for(j=1;j<=size(Q[i]);j++){
+				for(k=i;k<=size(Q);k++){
+					for(l=1;l<=size(Q[k]);l++){
+						plcm = lcmv(leadmonom(Q[i][j]),leadmonom(Q[k][l]));
+						if(plcm != 0){
+							if(involutive_multiple(X[i],plcm,leadmonom(Q[i][j])) && involutive_multiple(X[k],plcm,leadmonom(Q[k][l]))){
+								vs = spoly(Q[i][j],Q[k][l],1);
+								if(vs != 0){
+									P[eta[i,k]] = insert(P[eta[i,k]],vs);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if(find(option(),"prot") != 0){
+			print("calling CSSSub!");
+		}
+		Lg = Lg + CSSSub(X,eta,E,h*N,Ls,Q,P);
+	}
+	return(Lg);
+}
+
+proc CSSSub(list X, intmat eta, ideal E, ideal N, list Ls, list Q, list P)
+{
+	int i,j;
+
+	if(radical_membership_without_t(E,N)){
+		return(list());
+	}
+	else{
+		list Lg;
+		ideal Ei = E;
+		ideal Ni = N;
+		list Pc = P;
+	
+		if(find(option(),"prot") != 0){
+			print("entering in CSSSub :");
+			E;
+			N;
+		}
+
+		int sizePc = 0;
+		for(i=1;i<=size(Pc);i++){
+			sizePc = sizePc + size(Pc[i]);
+		}
+
+		if(find(option(),"prot") != 0){
+			print("size(Pc) ="), sizePc;
+		}
+
+		int nyc;
+		vector f, fc;
+		while(sizePc != 0){
+			for(i=1;i<=size(Pc);i++){
+				if(size(Pc[i]) != 0){
+					f = Pc[i][1];
+					nyc = i;
+					Pc[i] = delete(Pc[i],1);
+					sizePc = sizePc - 1;
+					break;
+				}
+			}
+			f = elimdenom(f);
+
+			if(find(option(),"prot") != 0){
+				print("spoly (before reduction):"), f;
+			}
+
+			list Q' = Q;
+			for(i=1;i<=size(Q');i++){
+				if(!subset(X[nyc],X[i])){
+					Q'[i] = list();
+				}
+				f = reduce_mixed_with_E(X,f,Ls[3],Q',Ei);
+			}
+			kill Q';
+
+			f = elimdenom(f);
+			f = reduction_by_ideal(module(f),Ei)[1];
+
+			if(find(option(),"prot") != 0){
+				print("spoly (after reduction) :"), f;
+			}
+
+			fc = f;
+			while(fc != 0){
+				list P' = Pc;
+				vector plcm;
+				vector vs;
+
+				if(find(option(),"prot") != 0){
+					print("constructing P':");
+				}
+
+				for(i=1;i<=size(Ls[3]);i++){
+					plcm = lcmv(leadmonom(Ls[3][i]),leadmonom(fc));
+					if(plcm != 0){
+						if(involutive_multiple(X[nyc],plcm,leadmonom(fc))){
+							vs = spoly(Ls[3][i],fc,1);
+							if(vs != 0){
+								P'[nyc] = insert(P'[nyc],vs);
+							}
+						}
+					}
+				}
+				for(i=1;i<=size(Q);i++){
+					for(j=1;j<=size(Q[i]);j++){
+						plcm = lcmv(leadmonom(Q[i][j]),leadmonom(fc));
+						if(plcm != 0){
+							if(involutive_multiple(X[i],plcm,leadmonom(Q[i][j])) && involutive_multiple(X[nyc],plcm,leadmonom(fc))){
+								vs = spoly(Q[i][j],fc,1);
+								if(vs != 0){
+									P'[eta[i,nyc]] = insert(P'[eta[i,nyc]],vs);
+								}
+							}
+						}
+					}
+				}
+
+				if(find(option(),"prot") != 0){
+					print("calling CSSSub :");
+				}
+
+				list S2 = Q;
+				S2[nyc] = S2[nyc],elimdenom(fc/leadcoef(fc));
+				S2[nyc] = compress(S2[nyc]);
+				Lg = Lg + CSSSub(X,eta,Ei,leadcoef(fc)*Ni,Ls,S2,P');
+				Ei = Ei, leadcoef(fc);
+				fc = fc - lead(fc);
+				kill P', S2, plcm, vs;
+			}
+		}
+		if(!radical_membership_without_t(Ei,Ni)){
+			Lg = insert(Lg,list(Ei,Ni,Ls,Q));
+		}
+		return(Lg);
+	}
+}
+
+proc elimdenom(list #)
+{
+	int i, j;
+	if(size(#) != 1){
+		ERROR("Check the number of indices of boundary!");
+	}
+	if(typeof(#[1]) == "vector"){
+		def R = basering;
+		if(npars(R) != 0){
+			def PR = par2varRing(ideal(0))[1];
+			setring PR;
+			poly lcmd = 1;
+			setring R;
+
+			vector f = #[1];
+			poly deno;
+			while(f != 0){
+				deno = denominator(leadcoef(f));
+				setring PR;
+				lcmd = lcm(imap(R,deno),lcmd);
+				setring R;
+				f = f-lead(f);
+			}
+			f = imap(PR,lcmd)*#[1];
+			setring PR;
+			vector f = simplify(imap(R,f),1);
+			setring R;
+			return(imap(PR,f));
+		}
+		else{
+			return(simplify(#[1],1));
+		}
+	}
+	if(typeof(#[1]) == "module"){
+		module M = #[1];
+		for(i=1;i<=size(M);i++){
+			M[i] = elimdenom(M[i]);
+		}
+		return(M);
+	}	
+}
+
+proc simplifyN(ideal Ni)
+{
+	int i, j;
+	def R = basering;
+	if(npars(R) != 0){
+		def PR = par2varRing(Ni)[1];
+		setring PR;
+		ideal Ni = compress(Id[1]);
+		for(i=1;i<=size(Ni);i++){
+			ideal fac = factorize(Ni[i],1)[1];
+			Ni[i] = 1;
+			for(j=1;j<=size(fac);j++){
+				Ni[i] = Ni[i] * fac[j];
+			}
+		}
+		setring R;
+		return(imap(PR,Ni));
+	}
+	else{
+		return(Ni);
+	}
+}
+
+// if X1 \subset X2, return 1, else return 0
+proc subset(ideal X1, ideal X2)
+{
+	if(size(reduce(X1,std(X2)))){
+		return(0);
+	}
+	else{
+		return(1);
+	}
+}
+
+// check if p is X-involutive multiple of q.
+proc involutive_multiple(ideal X, vector p, vector q)
+{
+	int i;
+	int invq = 1;
+	intvec vp = leadexp(p);
+	intvec vq = leadexp(q);
+	if(vp[size(vp)] != vq[size(vq)]){
+		return(0);
+	}
+	else{
+		poly lmp = leadmonomial(p);
+		poly lmq = leadmonomial(q);
+
+		poly r = lmp/lmq;
+		if(r != 0){
+			if(r == 1 || subset(factorize(r,1),X)){
+				return(1);
+			}
+			else{
+				return(0);
+			}
+		}
+		else{
+			return(0);
+		}
+	}
+}
+
+// Ns is supposed to be a standard basis of N. 
+// Q is a list of modules
+proc reduce_mixed(list X, vector p, module Ns, list Q)
+{
+	print("function call : reduce_mixed");
+
+	int i,j;
+	int divisible = 1;
+	vector pt = p;
+	vector ptn = p;
+	while(divisible){
+		ptn = pt;
+		ptn = reduce(ptn,Ns,2);
+		ptn = elimdenom(ptn);
+		for(i=1;i<=size(Q);i++){
+			for(j=1;j<=size(Q[i]);j++){
+				// involutive multiple
+				if(involutive_multiple(X[i],ptn,Q[i][j])){
+					ptn = ptn - leadcoef(ptn)/leadcoef(Q[i][j])*leadmonomial(ptn)/leadmonomial(Q[i][j])*Q[i][j];
+					ptn = elimdenom(ptn);
+				}
+			}
+		}
+		if(ptn != pt){
+			divisible = 1;
+		}
+		else{
+			divisible = 0;
+		}
+		pt = ptn;
+	}
+	return(pt);
+}
+
+// Ns is supposed to be a standard basis of N. 
+proc reduce_mixed_with_E(list X, vector p, module Ns, list Q, ideal E)
+{
+	int i,j;
+	int divisible;
+	vector pt = p;
+	vector ptn = p;
+	vector rem;
+	while(pt != 0){
+		divisible = 1;
+		while(divisible){
+			ptn = pt;
+			ptn = reduce(ptn,Ns,2);
+			for(i=1;i<=size(Q);i++){
+				for(j=1;j<=size(Q[i]);j++){
+					// involutive multiple
+					if(involutive_multiple(X[i],ptn,Q[i][j])){
+						ptn = ptn - leadcoef(ptn)/leadcoef(Q[i][j])*leadmonomial(ptn)/leadmonomial(Q[i][j])*Q[i][j];
+					}
+				}
+			}
+			if(leadmonom(ptn) != leadmonom(pt)){
+				divisible = 1;
+			}
+			else{
+				divisible = 0;
+			}
+			pt = ptn;
+		}
+		rem = rem + lead(pt);
+		pt = pt - lead(pt);
+	}
+
+	rem = elimdenom(rem);
+	rem = reduction_by_ideal(module(rem),E)[1];
+	return(rem);
+}	
+
+proc reduction_by_ideal(module Q, ideal E)
+{
+	if(size(E) != 0 && npars(basering) != 0){
+		ring R = basering;
+		def PR = par2varRing(list(Q,E))[1];
+		setring PR;
+		if(not(defined(Q))){
+			module Q;
+		}
+		Q = Id[1];
+		if(not(defined(E))){
+			ideal E;
+		}
+		E = Id[2];
+
+		intvec wv = weight(E);
+		def PR'=changeord(list(list("wp",wv)),PR);
+		setring PR';
+		qring Quo = groebner(imap(PR,E));
+		if(not(defined(Q))){
+			module Q;
+		}
+		Q = imap(PR,Q);
+		Q = reduce(Q,std(0));
+		setring R;
+		return(imap(Quo,Q));
+	}
+	else{
+		if(size(E) != 0){
+			return(module(vector(0)));
+		}
+		else{
+			return(Q);
+		}
+	}
+}
+
+proc kbase_mixed(list X, list Lgi)
+{
+	int j,k;
+	module quo;
+	module kb = kbase(Lgi[3][3]);
+	for(j=1;j<=size(kb);j++){
+		int divisible = 0;
+		for(k=1;k<=size(Lgi[4]);k++){
+			for(l=1;l<=size(Lgi[4][k]);l++){
+				if(involutive_multiple(X[k],kb[j],Lgi[4][k][l])){
+					divisible = 1;
+					break;
+				}
+			}
+		}
+		if(!divisible){
+			quo = quo, kb[j];
+		}
+		kill divisible;
+	}
+	quo = compress(quo);
+	return(quo);
+}

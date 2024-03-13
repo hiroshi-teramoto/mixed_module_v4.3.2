@@ -1,0 +1,115 @@
+LIB "teachstd.lib";
+LIB "polylib.lib";
+LIB "ainvar.lib";
+LIB "crypto.lib";
+LIB "zeroset.lib";
+
+LIB "cssm_multi_std.lib";
+LIB "addcons.lib";
+LIB "local_cohomology.lib";
+LIB "cgs.lib";
+LIB "check_zeros.lib";
+LIB "simplify_constructible.lib";
+LIB "combine_locally_closed.lib";
+LIB "gauss_elimination.lib";
+
+int nx = 2;
+int ny = 2;
+int i,j,k,l;
+intmat imat[nx+ny][nx+ny];
+for(i=1;i<=nx+ny;i++){
+	imat[1,i] = -1;
+}
+for(i=1;i<=ny;i++){
+	imat[i+1,ny+nx-i+1] = 1;
+}
+for(i=1;i<=nx-1;i++){
+	imat[i+ny+1,nx-i+1] = 1;
+}
+ring R = (0,c(1..4)), (x(1..nx),y(1..ny)), (M(imat),C);
+
+list X = list();
+for(i=1;i<=ny;i++){
+	X[i] = ideal(y(i));
+	X[i] = std(X[i]);
+}
+X[ny+1] = ideal(0);
+
+// computing eta (for details, see the paper.).
+intmat eta[ny+1][ny+1];
+ideal Xij;
+for(i=1;i<=ny+1;i++){
+	eta[i,i] = i;
+	for(j=i+1;j<=ny+1;j++){
+		Xij = std(reduce(intersect(X[i],X[j]),maxideal(2)));
+		for(k=1;k<=ny+1;k++){ 
+			if(size(reduce(Xij,X[k])) == 0 && size(reduce(X[k],Xij)) == 0){
+				eta[i,j] = k;
+				break;
+			}
+		}
+		eta[j,i] = eta[i,j];	
+	}
+}
+
+ideal E = 0;
+ideal N = 1;
+
+int K = 1;
+poly f(1..ny);
+f(1) = c(1)*x(1)+c(2)*x(2);
+f(2) = c(3)*x(1)+c(4)*x(2);
+
+vector f;
+for(i=1;i<=ny;i++){
+	f = f + f(i)*gen(i);
+}
+
+// option(prot);
+ideal zero;
+for(i=1;i<=ny;i++){
+	zero = zero, y(i)-f(i);
+}
+zero = compress(zero);
+module TR = x(1)*diff(f,x(1)), x(2)*diff(f,x(1)), x(1)*diff(f,x(2)), x(2)*diff(f,x(2));
+
+TR = compress(TR);
+ideal mx = x(1..nx);
+ideal my = y(1..ny);
+module TR1K = TR + zero*freemodule(ny) + mx^(K+1)*freemodule(ny);
+list Q;
+for(i=1;i<=ny;i++){
+	Q[i] = module(y(i)*gen(i));
+}
+Q[ny+1] = module(vector(0));
+
+list Lg = cssm(X,eta,E,N,TR1K,Q);
+// Lg;
+
+list Lcod;
+for(i=1;i<=size(Lg);i++){
+	int thereis = 0;
+	int vd = size(kbase_mixed(X,Lg[i]))-ny;
+	for(j=1;j<=size(Lcod);j++){
+		if(vd == Lcod[j][1]){
+			thereis = 1;
+			Lcod[j][2] = insert(Lcod[j][2],list(Lg[i][1],Lg[i][2]));
+			break;
+		}
+	}
+	if(!thereis){
+		Lcod = insert(Lcod,list(vd,list(list(Lg[i][1],Lg[i][2]))));
+	}
+	kill thereis, vd;
+}
+for(i=1;i<=size(Lcod);i++){
+	Lcod[i][2] = addcons(Lcod[i][2]);
+	for(j=1;j<=size(Lcod[i][2]);j++){
+		Lcod[i][2][j][1] = radical_ideal(Lcod[i][2][j][1]);
+		Lcod[i][2][j][2] = reduction_by_ideal(Lcod[i][2][j][2],Lcod[i][2][j][1]);
+		Lcod[i][2][j][2] = radical_ideal(Lcod[i][2][j][2]);
+	}
+}
+Lcod;
+
+quit;

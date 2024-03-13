@@ -1,0 +1,177 @@
+// this algorithm, we assume that the parameter "t" is not yet defined...
+// this program uses Rabinowich's trick... (TODO: try to implement other efficient methods if possible...)
+proc radical_membership_without_t(ideal E, ideal N)
+{
+	ring R = basering;
+	int i;
+	int contained;
+
+	if(npars(R) != 0){
+		if(not(defined(PR))){
+			def PR = par2varRing(list(E,N))[1];
+		}
+		else{
+			PR = par2varRing(list(E,N))[1];
+		}	
+		setring PR;
+		// note that Id[1] = E and Id[2] = N;
+		ideal E = Id[1];
+		ideal N = Id[2];
+		intvec wv = weight(E);
+
+		// making ordering grobal
+		def PR'=changeord(list(list("wp",wv)),PR);
+		setring PR';
+		ideal E = imap(PR,E);
+		ideal N = imap(PR,N);
+
+		// check N \subset sqrt(E)
+		contained = 1;
+		// this is what is called "trivial check".
+		N = reduce(N,groebner(E),1);
+		if(size(N) != 0){
+			// else use Rabinovich trick
+			for(i=1;i<=ncols(N);i++){
+				if(rad_con(N[i],E) == 0){
+					contained = 0;
+					break;
+				}
+			}
+		}
+		setring R;
+	}
+	else{
+		contained = 1;
+		// check N \subset sqrt(E)
+		for(i=1;i<=ncols(N);i++){
+			if(rad_con(N[i],E) == 0){
+				contained = 0;
+				break;
+			}
+		}
+	}
+
+	return(contained);
+}
+
+// returns 1 if coefficient is non-zero...
+// returns 0 if it is uncertain...
+proc coef_is_nonzero(ideal E, ideal N, poly coefficient)
+{
+	ring R = basering;
+
+	int non_zero;
+	if(npars(R) == 0 || coefficient == 0){
+		if(coefficient == 0){
+			non_zero = 0;
+		}
+		else{
+			non_zero = 1;
+		}
+	}
+	else{
+		int i;
+		poly p = numerator(number(coefficient));
+
+		if(not(defined(PR))){
+			def PR = par2varRing(list(E,N,ideal(p)))[1];
+		}
+		else{
+			PR = par2varRing(list(E,N,ideal(p)))[1];
+		}	
+		setring PR;
+		ideal E = Id[1];
+		ideal N = Id[2];
+		poly p = Id[3][1];
+		intvec wv = weight(E+p);
+
+		// making ordering grobal
+		def PR'=changeord(list(list("wp",wv)),PR);
+		setring PR';
+		ideal E = imap(PR,E);
+		ideal N = imap(PR,N);
+		poly p = imap(PR,p);
+
+		non_zero = 1;
+		// check N \subset E+p
+		N = reduce(N,groebner(E+p),1);
+		if(size(N) != 0){
+			// check N \subset sqrt(E+p)
+			for(i=1;i<=ncols(N);i++){
+				// check if N[i] is in sqrt(E+p) by using Rabinowich's trick;
+				if(rad_con(N[i],E+p) == 0){
+					non_zero = 0;
+				}
+			}
+		}
+		setring R;
+	}
+
+	return(non_zero);
+}
+
+// returns 1 if p is zero...
+// returns 0 if it is uncertain...
+proc coef_is_zero(ideal E, ideal N, poly coefficient)
+{
+	ring R = basering;
+
+	int iszero;
+	if(npars(R) == 0){
+		if(coefficient == 0){
+			iszero = 1;
+		}
+		else{
+			iszero = 0;
+		}
+	}
+	else{
+		int i;
+		poly p = numerator(number(coefficient));
+
+		if(not(defined(PR))){
+			def PR = par2varRing(list(E,N,ideal(p)))[1];
+		}
+		else{
+			PR = par2varRing(list(E,N,ideal(p)))[1];
+		}	
+		setring PR;
+		ideal E = Id[1];
+		ideal N = Id[2];
+		poly p = Id[3][1];
+
+		// making ordering grobal
+		intvec wv = weight(E+p);
+
+		def PR'=changeord(list(list("wp",wv)),PR);
+		setring PR';
+		ideal E = imap(PR,E);
+		ideal N = imap(PR,N);
+		poly p = imap(PR,p);
+
+		// note Id[1] = E, Id[2] = N, Id[3][1] = p;
+		if(not(defined(pN))){
+			ideal pN = p*N; 
+		}
+		else{
+			pN = p*N;
+		}
+
+		iszero = 1;
+		// check if p*N is in E
+		pN = reduce(pN,groebner(E),1);
+		if(size(pN) != 0){
+			// check if p*N is in sqrt(E) by using Rabinowich's trick
+			for(i=1;i<=ncols(pN);i++){
+				if(rad_con(pN[i],E) == 0){
+					iszero = 0;
+					break;
+				}
+			}
+		}
+
+		setring R;
+	}
+
+	return(iszero);
+}

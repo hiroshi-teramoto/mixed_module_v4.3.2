@@ -1,0 +1,190 @@
+// This procedure is to calculate radical ideals...
+proc radical_ideal(ideal E)
+{
+	ring R = basering;
+	def PR = par2varRing(list(E))[1];
+	setring PR;
+	if(not(defined(E))){
+		ideal E;
+	}
+	E = Id[1];
+	intvec wv = weight(E);
+
+	def PR'=changeord(list(list("wp",wv)),PR);
+	setring PR';
+	if(not(defined(E))){
+		ideal E;
+	}
+	E = groebner(radical(imap(PR,E)));
+	
+	setring R;
+	return(imap(PR',E));
+}
+
+proc addcons_one_level(list L)
+{
+	int i;
+	int numcons = size(L);
+
+	ideal E = 1;
+	for(i=1;i<=numcons;i++){
+		E = intersect(E,sat(L[i][1],L[i][2]));
+	}
+	ideal N = 1;
+	bigint ns = bigint(2)^numcons;
+	intvec v = 0:numcons;
+	bigint sc, s;
+
+	ideal Es, Ns;
+	for(s=1;s<=ns;s=s+1){
+		sc = s;
+		for(i=1;i<=numcons;i++){
+			if(sc mod 2 == 1){
+				v[i] = 1;
+			}
+			else{
+				v[i] = 0;
+			}
+			sc = sc div 2;	
+		}
+
+		Es = E;
+		Ns = 1;
+		for(i=1;i<=numcons;i++){
+			if(v[i]){
+				Es = Es + L[i][1] + L[i][2];
+			}
+			else{
+				Ns = intersect(Ns,L[i][1]);
+			}
+		}
+
+		// sat has a problem when Es = Ns = 0
+		if(size(Es) != 0 || size(Ns) != 0){
+			N = intersect(N,sat(Es,Ns));
+		}
+	}
+
+	// removing V(E)\V(N) from L
+	list Lc;
+	ideal Ec, Nc;
+	for(i=1;i<=numcons;i++){
+		Ec = L[i][1]+N;	
+		Nc = intersect(L[i][2],E);
+		if(!radical_membership_without_t(L[i][1],Nc)){
+			Lc = insert(Lc,list(L[i][1],Nc));
+		}
+		if(!radical_membership_without_t(Ec,L[i][2])){
+			Lc = insert(Lc,list(Ec,L[i][2]));	
+		}
+	}
+
+	return(list(E,N,Lc));
+}
+
+// this program is to combine several constructible sets
+proc addcons(list L)
+{
+	int numcons = size(L);
+	if(numcons <= 1){
+		return(L);
+	}
+	else{
+		ring R = basering;
+		int numv = nvars(R);
+		list listE, listN;
+		int i;
+
+		for(i=1;i<=numcons;i++){
+			listE = insert(listE,L[i][1]);
+			listN = insert(listN,L[i][2]);
+		}
+
+		def PR = par2varRing(listE+listN)[1];
+		setring PR;
+		if(not(defined(L))){
+			list L;
+		}
+		L = list();
+		for(i=1;i<=numcons;i++){
+			L = insert(L,list(Id[i],Id[i+numcons]));
+		}
+		def PR'=changeord(list(list("dp",nvars(PR))),PR);
+		setring PR';	
+		list L = imap(PR,L);
+		L = simplify_constructible(L);
+
+		if(size(L) >= 2){
+			list Lcopy = L;
+			L = list();
+			int consistent = 1;
+			while(consistent){
+				list LEN = addcons_one_level(Lcopy);
+				L = insert(L,list(LEN[1],LEN[2]));
+				if(size(LEN[3]) != 0){
+					Lcopy = simplify_constructible(LEN[3]);
+				}
+				else{
+					consistent = 0;
+				}
+				kill LEN;
+			}
+		}
+		setring R;
+		for(i=1;i<=size(L);i++){
+			L[i][1] = radical_ideal(L[i][1]);
+			L[i][2] = radical_ideal(L[i][2]);
+		}
+		return(imap(PR',L));
+	}
+}
+
+// this program is to reduce N by E
+proc reduce_ideal(ideal N, ideal E)
+{
+	ring R = basering;
+	def PR = par2varRing(list(N,E))[1];
+	setring PR;
+	if(not(defined(N))){
+		ideal N;
+	}
+	N = Id[1];
+
+	if(not(defined(E))){
+		ideal E;
+	}
+	E = Id[2];
+
+	def PR'=changeord(list(list("dp",nvars(PR))),PR);
+	setring PR';	
+	ideal E = imap(PR,E);
+	ideal N = imap(PR,N);
+	N = reduce(N,groebner(E));
+
+	setring R;
+
+	return(imap(PR',N));
+}
+
+// EqualModules
+// Input: modules F and G
+// Output: 1 if they are identical (the same polynomials in the same order)
+//         0 else
+proc EqualModules(module F, module G)
+{
+	int i=1; int t=1;
+	if(size(F) != size(G)){
+		return(0);
+	}
+
+	module Fs = sortier(F);
+	module Gs = sortier(G);
+	while((i <= size(Fs)) and (t)){
+		if(Fs[i] != Gs[i]){
+			t = 0;
+		}
+		i++;
+	}
+
+	return(t);
+}

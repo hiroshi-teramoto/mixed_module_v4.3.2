@@ -1,0 +1,118 @@
+LIB "teachstd.lib";
+LIB "polylib.lib";
+LIB "ainvar.lib";
+LIB "crypto.lib";
+LIB "zeroset.lib";
+
+LIB "cssm_multi_std.lib";
+LIB "addcons.lib";
+LIB "local_cohomology.lib";
+LIB "cgs.lib";
+LIB "check_zeros.lib";
+LIB "simplify_constructible.lib";
+LIB "combine_locally_closed.lib";
+LIB "gauss_elimination.lib";
+LIB "matrix_representation.lib";
+
+int nx = 2;
+int ny = 2;
+int i,j,k,l;
+intmat imat[nx+ny][nx+ny];
+for(i=1;i<=nx+ny;i++){
+	imat[1,i] = -1;
+}
+for(i=1;i<=ny;i++){
+	imat[i+1,ny+nx-i+1] = 1;
+}
+for(i=1;i<=nx-1;i++){
+	imat[i+ny+1,nx-i+1] = 1;
+}
+ring R = 0, (x(1..nx),y(1..ny)), (M(imat),C);
+list X = list();
+for(i=1;i<=ny;i++){
+	X[i] = ideal(y(i));
+	X[i] = std(X[i]);
+}
+X[ny+1] = ideal(0);
+
+// computing eta (for details, see the paper.).
+intmat eta[ny+1][ny+1];
+ideal Xij;
+for(i=1;i<=ny+1;i++){
+	eta[i,i] = i;
+	for(j=i+1;j<=ny+1;j++){
+		Xij = std(reduce(intersect(X[i],X[j]),maxideal(2)));
+		for(k=1;k<=ny+1;k++){ 
+			if(size(reduce(Xij,X[k])) == 0 && size(reduce(X[k],Xij)) == 0){
+				eta[i,j] = k;
+				break;
+			}
+		}
+		eta[j,i] = eta[i,j];	
+	}
+}
+
+ideal E = 0;
+ideal N = 1;
+
+int K = 2;
+poly f(1..ny);
+f(1) = x(1);
+f(2) = x(1);
+
+vector f;
+for(i=1;i<=ny;i++){
+	f = f + f(i)*gen(i);
+}
+
+// option(prot);
+ideal zero;
+for(i=1;i<=ny;i++){
+	zero = zero, y(i)-f(i);
+}
+zero = compress(zero);
+module TR = diff(f,x(1)), diff(f,x(2));
+
+TR = compress(TR);
+ideal mx = x(1..nx);
+ideal my = y(1..ny);
+module TR1K = mx^2*TR + zero*freemodule(ny) + mx^(K+1)*freemodule(ny);
+list Q;
+for(i=1;i<=ny;i++){
+	Q[i] = module(y(i)^2*gen(i));
+}
+Q[ny+1] = module(vector(0));
+
+list Lg = cssm(X,eta,E,N,TR1K,Q);
+// Lg;
+
+list list_CT = list();
+for(i=1;i<=size(Lg);i++){
+	module HK1 = mx^K*freemodule(ny);
+	module REM = HK1;
+	for(j=1;j<=size(HK1);j++){
+		REM[j] = reduce_mixed_with_E(X,REM[j],Lg[i][3][3],Lg[i][4],Lg[i][3][1]);	
+	}
+	if(size(REM) != 0){
+		matrix A = matrix_representation_normalize(REM,kbase_mixed(X,Lg[i]));
+		list L = gauss_elimination_gb(Lg[i][1],Lg[i][2],transpose(A));
+
+		module CT;
+		for(j=1;j<=size(L);j++){
+			CT = 0;
+			for(k=1;k<=size(L[j][4]);k++){
+				CT = CT + HK1[L[j][4][k]];
+			}
+			list_CT = insert(list_CT,list(list(L[j][1],L[j][2]),CT));
+		}
+	}
+	else{
+		module CT;
+		list_CT = insert(list_CT,list(list(Lg[i][1],Lg[i][2]),CT));
+	}
+}
+
+print("complete transversal :");
+list_CT;
+
+quit;

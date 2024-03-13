@@ -1,0 +1,1030 @@
+// *********************************************************
+// comprehensive standard basis systems for modules 
+// This function returns a list of (E, N, cgs) 
+// cgs: standard basis
+// valid in the parameter region V(E)\V(N) 
+// *********************************************************
+proc cgs_module(ideal E, ideal N, module RHS)
+{
+	if(radical_membership_without_t(E,N)){
+		// In this case, V(E)/V(N) is inconsistent... 
+		return(list());
+	}
+	else{
+		// In this case, V(E)/V(N) is consistent... 
+		def R = basering;
+		int i,j,k,l; // index for incliment
+
+		list rl = ringlist(R);
+		// looking for where is component ordering
+		int indc;
+		for(i=1;i<=size(rl[3]);i++){
+			if(rl[3][i][1] == "C" || rl[3][i][1] == "c"){
+				indc = i;
+			}
+		}
+
+		int numv = size(rl[2]);
+		if(indc != 1 && indc != size(rl[3])){
+			ERROR("this ordering is not supported in this program (cgs_module)");
+		}
+		else{
+			if(indc == size(rl[3])){ // the ordering is term over position
+				// ordering should be specified by matrices
+				if(rl[3][1][1] == "M"){
+					// check if the ordering is global or local
+					int wlocal = 1;
+					int wglobal = 1;
+					// checking the first row to see if the ordering is global or local
+					for(i=1;i<=numv;i++){
+						if(rl[3][1][2][i] <= 0){
+							wglobal = 0;
+						}
+						if(rl[3][1][2][i] >= 0){
+							wlocal = 0;
+						}
+					}
+
+					if(wlocal){
+						// adding the variable t to the current ring
+						for(i=numv;i>=1;i--){
+							rl[2][i+1] = rl[2][i];
+						}
+						rl[2][1] = "t";
+						// adding the variable e to the current ring (component of module)
+						int nc = nrows(RHS);	
+						for(i=1;i<=nc;i++){
+							rl[2][i+numv+1] = "e(" + string(i) + ")";
+						}
+
+						int inc = 1;
+						intmat imat[numv+1][numv+1];
+						for(i=1;i<=numv;i++){
+							for(j=1;j<=numv;j++){
+								imat[i+1,j+1] = rl[3][1][2][inc];
+								inc++;
+							}
+						}
+						imat[1,1] = 1;
+						for(i=1;i<=numv;i++){
+							imat[1,i+1] = -imat[2,i+1];
+						}
+						rl[3][1][2] = intvec(imat);
+
+						// inserting the ordering information for e
+						for(i=size(rl[3]);i>=2;i--){
+							rl[3][i+1] = rl[3][i]; 
+						}
+						if(rl[3][size(rl[3])][1] == "C"){
+							rl[3][2] = list("ip",intvec(1:nc));
+						}
+						if(rl[3][size(rl[3])][1] == "c"){
+							rl[3][2] = list("lp",intvec(1:nc));
+						}
+					}
+					// Please rewrite this part !!!
+					if(wglobal){
+						ERROR("this ordering is not supported by this procedure.");							
+					}
+					if(!wglobal && !wlocal){
+						ERROR("this ordering is not supported by this procedure.");
+					} 
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+			if(indc == 1){ // the ordering is position over terms
+				if(rl[3][2][1] == "M"){
+					// check if the ordering is global or local
+					int wlocal = 1;
+					int wglobal = 1;
+					// checking the first row to see if the ordering is global or local
+					for(i=1;i<=numv;i++){
+						if(rl[3][2][2][i] <= 0){
+							wglobal = 0;
+						}
+						if(rl[3][2][2][i] >= 0){
+							wlocal = 0;
+						}
+					}
+
+					if(wlocal){
+						// adding the variable e to the current ring
+						int nc = nrows(RHS);
+						for(i=numv;i>=1;i--){
+							rl[2][i+nc] = rl[2][i];
+						}
+						for(i=1;i<=nc;i++){
+							rl[2][i] = "e(" + string(i) + ")";
+						}
+						// adding the variable t to the current ring
+						for(i=numv;i>=1;i--){
+							rl[2][i+nc+1] = rl[2][i+nc];
+						}
+						rl[2][nc+1] = "t";
+
+						// inserting the ordering information for e 
+						for(i=size(rl[3]);i>=2;i--){
+							rl[3][i+1] = rl[3][i]; 
+						}
+						if(rl[3][1][1] == "C"){
+							rl[3][2] = list("ip",intvec(1:nc));
+						}
+						if(rl[3][1][1] == "c"){
+							rl[3][2] = list("lp",intvec(1:nc));
+						}
+
+						int inc = 1;
+						intmat imat[numv+1][numv+1];
+						for(i=1;i<=numv;i++){
+							for(j=1;j<=numv;j++){
+								imat[i+1,j+1] = rl[3][3][2][inc];
+								inc++;
+							}
+						}
+						imat[1,1] = 1;
+						for(i=1;i<=numv;i++){
+							imat[1,i+1] = -imat[2,i+1];
+						}
+						rl[3][3][2] = intvec(imat);
+					}
+					if(wglobal){
+						list cgs_list = cgs_module_global(E,N,RHS);
+						return(cgs_list);
+					}
+					if(!wglobal && !wlocal){
+						ERROR("this ordering is not supported by this procedure.");
+					} 
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+
+			list cgs_list;
+			ideal Ei, Ni;
+			module RHSi;
+
+			def Rt = ring(rl);
+			setring Rt;
+			int nv = nvars(Rt);
+			ideal EE = e(1..nc);
+			qring Qt = std(EE^2);
+
+			module RHS = imap(R,RHS);
+			ideal RHSe;
+			vector rem;
+			intvec le;
+			for(i=1;i<=ncols(RHS);i++){
+				RHSe[i] = 0;
+				for(j=1;j<=nrows(RHS);j++){
+					RHSe[i] = RHSe[i] + e(j)*RHS[j,i];
+				}
+			}
+			RHSe = RHSe;
+
+			ideal RHSet = t*homog(RHSe,t);
+			ideal E = imap(R,E);
+			ideal N = imap(R,N);
+			list cgs_list_global = cgs_ideal_global(E,N,RHSet);
+
+			ideal Ei, Ni;
+			ideal RHSei;
+			module RHSi;
+			poly comp;
+			for(i=1;i<=size(cgs_list_global);i++){
+				Ei = cgs_list_global[i][1];
+				Ni = cgs_list_global[i][2];
+				RHSei = compress(reduce(cgs_list_global[i][3],std(0)));
+				RHSi = 0;
+				for(j=1;j<=ncols(RHSei);j++){
+					RHSi[j] = 0;
+					for(k=1;k<=nc;k++){
+						comp = subst(RHSei[j],t,1);
+						for(l=1;l<=nc;l++){
+							if(l != k){
+								comp = subst(comp,e(l),0);
+							}
+							else{
+								comp = subst(comp,e(l),1);
+							}
+						}
+						RHSi[j] = RHSi[j] + comp * gen(k);
+					}
+				}				
+
+				setring R;
+				Ei = imap(Qt,Ei);
+				Ni = imap(Qt,Ni);
+				RHSi = compress(imap(Qt,RHSi));
+				attrib(RHSi,"isSB",1);
+				cgs_list = cgs_list + list(list(Ei,Ni,RHSi));
+				setring Qt;
+			}
+
+			setring R;
+			return(cgs_list);
+		}
+	}
+}
+
+// *********************************************************
+// comprehensive standard basis systems for ideal 
+// This function returns a list of (E, N, cgs) 
+// cgs: standard basis
+// valid in the parameter region V(E)\V(N) 
+// *********************************************************
+proc cgs_ideal(ideal E, ideal N, ideal RHS)
+{
+	if(radical_membership_without_t(E,N)){
+		// In this case, V(E)/V(N) is inconsistent... 
+		return(list());
+	}
+	else{
+		// In this case, V(E)/V(N) is consistent... 
+		def R = basering;
+		int i,j,k,l; // index for incliment
+
+		list rl = ringlist(R);
+		// looking for where is component ordering
+		int indc;
+		for(i=1;i<=size(rl[3]);i++){
+			if(rl[3][i][1] == "C" || rl[3][i][1] == "c"){
+				indc = i;
+			}
+		}
+
+		int numv = size(rl[2]);
+		if(indc != 1 && indc != size(rl[3])){
+			ERROR("this ordering is not supported in this program (cgs_ideal)");
+		}
+		else{
+			if(indc == size(rl[3])){ // the ordering is component last
+				if(rl[3][1][1] == "M"){
+					// check if the ordering is global or local
+					int wlocal = 1;
+					int wglobal = 1;
+					// checking the first row to see if the ordering is global or local
+					for(i=1;i<=numv;i++){
+						if(rl[3][1][2][i] <= 0){
+							wglobal = 0;
+						}
+						if(rl[3][1][2][i] >= 0){
+							wlocal = 0;
+						}
+					}
+
+					if(wlocal){
+						// adding the variable t to the current ring
+						for(i=numv;i>=1;i--){
+							rl[2][i+1] = rl[2][i];
+						}
+						rl[2][1] = "t";
+
+						int inc = 1;
+						intmat imat[numv+1][numv+1];
+						for(i=1;i<=numv;i++){
+							for(j=1;j<=numv;j++){
+								imat[i+1,j+1] = rl[3][1][2][inc];
+								inc++;
+							}
+						}
+						imat[1,1] = 1;
+						for(i=1;i<=numv;i++){
+							imat[1,i+1] = -imat[2,i+1];
+						}
+						rl[3][1][2] = intvec(imat);
+					}
+					if(wglobal){
+						list cgs_list = cgs_ideal_global(E,N,RHS);
+						return(cgs_list);
+					}
+					if(!wglobal && !wlocal){
+						ERROR("this ordering is not supported by this procedure.");
+					} 
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+			if(indc == 1){ // the ordering is component first
+				if(rl[3][2][1] == "M"){
+					// check if the ordering is global or local
+					int wlocal = 1;
+					int wglobal = 1;
+					// checking the first row to see if the ordering is global or local
+					for(i=1;i<=numv;i++){
+						if(rl[3][2][2][i] <= 0){
+							wglobal = 0;
+						}
+						if(rl[3][2][2][i] >= 0){
+							wlocal = 0;
+						}
+					}
+
+					if(wlocal){
+						// adding the variable t to the current ring
+						for(i=numv;i>=1;i--){
+							rl[2][i+1] = rl[2][i];
+						}
+						rl[2][1] = "t";
+
+						int inc = 1;
+						intmat imat[numv+1][numv+1];
+						for(i=1;i<=numv;i++){
+							for(j=1;j<=numv;j++){
+								imat[i+1,j+1] = rl[3][2][2][inc];
+								inc++;
+							}
+						}
+						imat[1,1] = 1;
+						for(i=1;i<=numv;i++){
+							imat[1,i+1] = -imat[2,i+1];
+						}
+						rl[3][2][2] = intvec(imat);
+					}
+					if(wglobal){
+						list cgs_list = cgs_ideal_global(E,N,RHS);
+						return(cgs_list);
+					}
+					if(!wglobal && !wlocal){
+						ERROR("this ordering is not supported by this procedure.");
+					} 
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+
+			list cgs_list;
+			ideal Ei, Ni;
+			ideal RHSi;
+
+			def Rt = ring(rl);
+			setring Rt;
+			int nv = nvars(Rt);
+
+			ideal RHS = imap(R,RHS);
+			ideal RHSt = t*homog(RHS,t);
+			ideal E = imap(R,E);
+			ideal N = imap(R,N);
+			list cgs_list_global = cgs_ideal_global(E,N,RHSt);
+
+			ideal Ei, Ni;
+			ideal RHSi;
+			for(i=1;i<=size(cgs_list_global);i++){
+				Ei = cgs_list_global[i][1];
+				Ni = cgs_list_global[i][2];
+				RHSi = cgs_list_global[i][3];
+				for(j=1;j<=ncols(RHSi);j++){
+					RHSi[j] = subst(RHSi[j],t,1);
+				}				
+
+				setring R;
+				Ei = imap(Rt,Ei);
+				Ni = imap(Rt,Ni);
+				RHSi = imap(Rt,RHSi);
+				attrib(RHSi,"isSB",1);
+				cgs_list = cgs_list + list(list(Ei,Ni,RHSi));
+				setring Rt;
+			}
+
+			setring R;
+			return(cgs_list);
+		}
+	}
+}
+
+// *********************************************************
+// comprehensive standard basis systems for ideals 
+// This function returns a list of (E, N, cgs) 
+// cgs: standard basis of ideal RHS
+// valid in the parameter region V(E)\V(N) 
+// *********************************************************
+proc cgs_ideal_global(ideal E, ideal N, ideal RHS)
+{
+	if(radical_membership_without_t(E,N)){
+		// In this case, V(E)/V(N) is inconsistent... 
+		return(list());
+	}
+	else{
+		// In this case, V(E)/V(N) is consistent... 
+		def R = basering;
+		int i,j,k,l; // index for incliment
+
+		int nv = nvars(R);
+		// In this ring, we regard parameters as variables.
+		if(npars(R) != 0){
+			def PR = par2varRing(list(E,RHS))[1];
+			setring PR;
+
+			// Id[1] : E, Id[2] : RHS
+			ideal PRHS = Id[2], Id[1];
+		}
+		else{
+			def PR = R;
+			ideal PRHS = RHS, E;
+		}	
+
+		option(redTail);
+		option(redSB);
+		if(size(PRHS) != 0){
+			PRHS = groebner(PRHS);
+		}
+		option(noredTail);
+		option(noredSB);
+
+		intvec le;
+		ideal Gr;
+		ideal GGr;
+		int VarDeg;
+		for(i=1;i<=ncols(PRHS);i++){
+			le = leadexp(PRHS[i]);
+			VarDeg = 0;
+			for(j=1;j<=nv;j++){
+				VarDeg = VarDeg + le[j];
+			}
+			if(VarDeg == 0){
+				Gr = Gr, PRHS[i];
+			}
+			else{
+				GGr = GGr, PRHS[i];
+			}
+		}
+		Gr = sortier(compress(Gr));
+		GGr = sortier(compress(GGr));
+
+		if(npars(R) != 0){
+			setring R;
+			ideal Gr = imap(PR,Gr);
+			ideal GGr = imap(PR,GGr);
+		}
+
+		list cgs_list;
+
+		ideal GrN;
+		for(i=1;i<=ncols(Gr);i++){
+			for(j=1;j<=ncols(N);j++){
+				GrN = GrN, Gr[i]*N[j];
+			}
+		}
+		GrN = compress(GrN);
+		if(!radical_membership_without_t(E,GrN)){
+			cgs_list = list(list(E,GrN,1));
+		}
+
+		if(radical_membership_without_t(Gr,N)){
+			return(cgs_list);
+		}
+		else{
+			ideal LM;
+			for(i=1;i<=ncols(GGr);i++){
+				LM = LM, leadmonom(GGr[i]);
+			}
+			LM = groebner(LM);
+
+			// *** here we can also consider other policies of how to choose Gm ***
+			ideal Gm;
+			for(i=1;i<=ncols(LM);i++){
+				for(j=1;j<=ncols(GGr);j++){
+					if(LM[i] == leadmonom(GGr[j])){
+						Gm = Gm, GGr[j];
+						break;
+					}
+				}
+			}
+			Gm = compress(Gm);
+			attrib(Gm,"isSB",1);
+
+			ideal cofs;
+			for(i=1;i<=ncols(Gm);i++){
+				cofs = cofs, leadcoef(Gm[i]);
+			}
+			cofs = compress(cofs);
+
+			list lfac;
+			for(i=1;i<=ncols(cofs);i++){
+				if(!coef_is_nonzero(Gr,N,cofs[i])){
+					lfac = insert(lfac,cofs[i]);
+				}
+			}
+			int size_lfac = size(lfac);
+
+			setring PR;
+
+			if(not(defined(lfac))){
+				list lfac = list();
+			}
+			if(size_lfac != 0){
+				lfac = imap(R,lfac);
+			}
+			ideal ifac;
+			for(i=1;i<=size(lfac);i++){
+				ifac = ifac, factorize(lfac[i],1);
+			}
+			ifac = compress(ifac);
+
+			// ***************************************************************************** 
+			// TODO:
+			// Fing out which ordering is the best for ifac = sort(compress(ifac),"dp")[1]. 
+			// Previously, we also tried "ls" instead of "dp". 
+			// *****************************************************************************
+			ifac = sort(ifac,"dp")[1];
+
+			setring R;
+			if(not(defined(ifac))){
+				ideal ifac;
+			}
+			ifac = imap(PR,ifac);
+
+			// removing repeated elements from ifac. 
+			list rfac;
+			int already_there;
+			for(i=1;i<=ncols(ifac);i++){
+				already_there = 0;
+				for(j=1;j<=size(rfac);j++){
+					if(ifac[i] == rfac[j]){
+						already_there = 1;
+						break;
+					}
+				}
+				if(!already_there && ifac[i] != 0){
+					rfac[size(rfac)+1] = ifac[i];
+				}
+			}
+
+			poly h = 1;
+			for(i=1;i<=size(rfac);i++){
+				h = h * rfac[i];
+			}
+			ideal hN = h * N;
+
+			// **** generic cases ****
+			if(!radical_membership_without_t(Gr,hN)){
+				// V(Gr)/V(hN) is consistent !
+				cgs_list = cgs_list + list(list(Gr,hN,Gm));
+			}
+			else{
+				// V(Gr)/V(hN) is inconsistent !
+			}
+
+			// **** non-generic cases ****
+			ideal hGr;
+			hN = N;
+			for(i=1;i<=size(rfac);i++){
+				hGr = Gr, rfac[i];
+				hGr = compress(hGr);
+				cgs_list = cgs_list + cgs_ideal_global(hGr,hN,GGr);
+
+				hN = rfac[i] * hN;
+			}
+			return(cgs_list);
+		}
+	}
+}
+
+// *********************************************************
+// comprehensive standard basis systems for syzygies
+// This function returns a list of (E, N, syz) 
+// syz: standard basis for syzygy module of RHS
+// valid in the parameter region V(E)\V(N) 
+// *********************************************************
+proc cgs_syz(ideal E, ideal N, module RHS)
+{
+	if(radical_membership_without_t(E,N)){
+		// In this case, V(E)/V(N) is inconsistent... 
+		return(list());
+	}
+	else{
+		// In this case, V(E)/V(N) is consistent... 
+		def R = basering;
+		int i,j,k,l; // index for incliment
+
+		list rl = ringlist(R);
+		// looking for where is component ordering
+		int indc;
+		for(i=1;i<=size(rl[3]);i++){
+			if(rl[3][i][1] == "C" || rl[3][i][1] == "c"){
+				indc = i;
+			}
+		}
+
+		int numv = size(rl[2]);
+		if(indc != 1 && indc != size(rl[3])){
+			ERROR("this ordering is not supported in this program (cgs_module)");
+		}
+		else{
+			int nc = nrows(RHS);
+			int ng = ncols(RHS)+1;
+			if(indc == size(rl[3])){ // the ordering is component last
+				// adding the variable g to the current ring
+				for(i=numv;i>=1;i--){
+					rl[2][i+1] = rl[2][i];
+				}
+				rl[2][1] = "g(" + string(1) + ")";
+
+				// adding the variable t to the current ring
+				for(i=numv;i>=1;i--){
+					rl[2][i+2] = rl[2][i+1];
+				}
+				rl[2][2] = "t";
+				// adding the variable e to the current ring
+				for(i=1;i<=nc;i++){
+					rl[2][i+2+numv] = "e(" + string(i) + ")";
+				}
+
+				// adding the rest of the variable g to the current ring
+				for(i=1;i<=ng-1;i++){
+					rl[2][i+2+numv+nc] = "g(" + string(i+1) + ")";
+				}
+
+				if(rl[3][1][1] == "M"){
+					// inserting the ordering information for g 
+					for(i=size(rl[3]);i>=1;i--){
+						rl[3][i+1] = rl[3][i]; 
+					}
+					rl[3][1] = list("lp",intvec(1));
+
+					int inc = 1;
+					intmat imat[numv+1][numv+1];
+					for(i=1;i<=numv;i++){
+						for(j=1;j<=numv;j++){
+							imat[i+1,j+1] = rl[3][2][2][inc];
+							inc++;
+						}
+					}
+					imat[1,1] = 1;
+					for(i=1;i<=numv;i++){
+						imat[1,i+1] = -imat[2,i+1];
+					}
+					rl[3][2][2] = intvec(imat);
+
+					// inserting the ordering information for e 
+					for(i=size(rl[3]);i>=3;i--){
+						rl[3][i+1] = rl[3][i]; 
+					}
+					if(rl[3][size(rl[3])][1] == "C"){
+						rl[3][3] = list("ip",intvec(1:nc));
+					}
+					if(rl[3][size(rl[3])][1] == "c"){
+						rl[3][3] = list("lp",intvec(1:nc));
+					}
+
+					// inserting the ordering information for g
+					for(i=size(rl[3]);i>=4;i--){
+						rl[3][i+1] = rl[3][i]; 
+					}
+					if(rl[3][size(rl[3])][1] == "C"){
+						rl[3][4] = list("ip",intvec(1:(ng-1)));
+					}
+					if(rl[3][size(rl[3])][1] == "c"){
+						rl[3][4] = list("lp",intvec(1:(ng-1)));
+					}
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+			if(indc == 1){ // the ordering is component first
+				// adding the variable g to the current ring
+				for(i=numv;i>=1;i--){
+					rl[2][i+ng] = rl[2][i];
+				}
+				for(i=1;i<=ng;i++){
+					rl[2][i] = "g(" + string(i) + ")";
+				}
+				// adding the variable e to the current ring
+				int nc = nrows(RHS);
+				for(i=numv;i>=1;i--){
+					rl[2][i+nc+ng] = rl[2][i+ng];
+				}
+				for(i=1;i<=nc;i++){
+					rl[2][i+ng] = "e(" + string(i) + ")";
+				}
+				// adding the variable t to the current ring
+				for(i=numv;i>=1;i--){
+					rl[2][i+nc+ng+1] = rl[2][i+nc+ng];
+				}
+				rl[2][nc+ng+1] = "t";
+
+				if(rl[3][2][1] == "M"){
+					// inserting the ordering information for g 
+					for(i=size(rl[3]);i>=2;i--){
+						rl[3][i+1] = rl[3][i]; 
+					}
+					if(rl[3][1][1] == "C"){
+						rl[3][2] = list("ip",intvec(1:ng));
+					}
+					if(rl[3][1][1] == "c"){
+						rl[3][2] = list("lp",intvec(1:ng));
+					}
+
+					// inserting the ordering information for e 
+					for(i=size(rl[3]);i>=3;i--){
+						rl[3][i+1] = rl[3][i]; 
+					}
+					if(rl[3][1][1] == "C"){
+						rl[3][3] = list("ip",intvec(1:nc));
+					}
+					if(rl[3][1][1] == "c"){
+						rl[3][3] = list("lp",intvec(1:nc));
+					}
+
+					int inc = 1;
+					intmat imat[numv+1][numv+1];
+					for(i=1;i<=numv;i++){
+						for(j=1;j<=numv;j++){
+							imat[i+1,j+1] = rl[3][4][2][inc];
+							inc++;
+						}
+					}
+					imat[1,1] = 1;
+					for(i=1;i<=numv;i++){
+						imat[1,i+1] = -imat[2,i+1];
+					}
+					rl[3][4][2] = intvec(imat);
+				}
+				else{
+					ERROR("this ordering is not supported by this procedure.");
+				}
+			}
+
+			list cgs_list;
+			ideal Ei, Ni;
+			module RHSi;
+
+			def Rt = ring(rl);
+			setring Rt;
+			int nv = nvars(Rt);
+			ideal EE = e(1..nc);
+			EE = EE^2;
+			ideal GG = g(1..ng);
+			GG = GG^2;
+			if(g(1) > g(ng)){
+				ideal EG = EE, GG, ideal(e(1..nc))*ideal(g(2..ng));
+			}
+			else{
+				ideal EG = EE, GG, ideal(e(1..nc))*ideal(g(1..(ng-1)));
+			}
+			EG = std(EG);
+
+			module RHS = imap(R,RHS);
+
+			ideal RHSet;
+			for(i=1;i<=ncols(RHS);i++){
+				RHSet[i] = 0;
+				for(j=1;j<=nrows(RHS[i]);j++){
+					RHSet[i] = RHSet[i] + RHS[i][j]*e(j);
+				}
+				RHSet[i] = t*homog(RHSet[i],t);
+				if(g(1) > g(ng)){
+					RHSet[i] = RHSet[i]*g(1) + t^(deg(RHSet[i])-1)*g(i+1);
+				}
+				else{
+					RHSet[i] = RHSet[i]*g(ng) + t^(deg(RHSet[i])-1)*g(i);
+				}
+			}
+			RHSet = RHSet, EG;
+
+			ideal E = imap(R,E);
+			ideal N = imap(R,N);
+			list cgs_list_global = cgs_ideal_global(E,N,RHSet);
+
+			ideal Ei, Ni;
+			ideal RHSei;
+			module RHSi;
+			poly comp;
+			for(i=1;i<=size(cgs_list_global);i++){
+				Ei = cgs_list_global[i][1];
+				Ni = cgs_list_global[i][2];
+				RHSei = compress(reduce(cgs_list_global[i][3],EG));
+
+				RHSi = 0;
+				if(g(1) > g(ng)){
+					for(j=1;j<=ncols(RHSei);j++){
+						if(diff(RHSei[j],g(1)) == 0){
+							RHSi[j] = 0;
+							for(k=2;k<=ng;k++){
+								comp = subst(RHSei[j],t,1);
+								for(l=1;l<=ng;l++){
+									if(l != k){
+										comp = subst(comp,g(l),0);
+									}
+									else{
+										comp = subst(comp,g(l),1);
+									}
+								}
+								RHSi[j] = RHSi[j] + comp * gen(k-1);
+							}
+						}
+					}
+				}
+				else{
+					for(j=1;j<=ncols(RHSei);j++){
+						if(diff(RHSei[j],g(ng)) == 0){
+							RHSi[j] = 0;
+							for(k=1;k<=ng-1;k++){
+								comp = subst(RHSei[j],t,1);
+								for(l=1;l<=ng;l++){
+									if(l != k){
+										comp = subst(comp,g(l),0);
+									}
+									else{
+										comp = subst(comp,g(l),1);
+									}
+								}
+								RHSi[j] = RHSi[j] + comp * gen(k);
+							}
+						}
+					}
+
+				}
+				RHSi = compress(RHSi);
+
+				setring R;
+				Ei = imap(Rt,Ei);
+				Ni = imap(Rt,Ni);
+				RHSi = compress(imap(Rt,RHSi));
+				attrib(RHSi,"isSB",1);
+				cgs_list = cgs_list + list(list(Ei,Ni,RHSi));
+				setring Rt;
+			}
+
+			setring R;
+			return(cgs_list);
+		}
+	}
+}
+
+// *********************************************************
+// comprehensive groebner basis systems for modules 
+// This function returns a list of (E, N, cgs) 
+// cgs: groebner basis of ideal RHS
+// valid in the parameter region V(E)\V(N) 
+// Please use this proc under the POT !!!
+// *********************************************************
+proc cgs_module_global(ideal E, ideal N, module RHS)
+{
+	if(radical_membership_without_t(E,N)){
+		// In this case, V(E)/V(N) is inconsistent... 
+		return(list());
+	}
+	else{
+		// In this case, V(E)/V(N) is consistent... 
+		def R = basering;
+		int i,j,k,l; // index for incliment
+
+		int nv = nvars(R);
+		int nc = nrows(RHS);
+
+		// In this ring, we regard parameters as variables.
+		if(npars(R) != 0){
+			def PR = par2varRing(list(E,RHS))[1];
+			setring PR;
+			ideal E = std(Id[1]);
+			module RHS = Id[2];
+
+			// Id[1] : E, Id[2] : RHS
+			module PRHS = RHS, E*freemodule(nc);
+		}
+		else{
+			def PR = R;
+			module PRHS = RHS, E*freemodule(nc);
+		}	
+
+		option(redTail);
+		option(redSB);
+		if(size(PRHS) != 0){
+			PRHS = groebner(PRHS);
+		}
+		option(noredTail);
+		option(noredSB);
+
+		intvec le;
+		module Gr;
+		module GGr;
+		int VarDeg;
+		for(i=1;i<=ncols(PRHS);i++){
+			if(reduce(PRHS[i],E) == 0){
+				Gr = Gr, PRHS[i];
+			}
+			else{
+				GGr = GGr, PRHS[i];
+			}
+		}
+		Gr = sortier(compress(Gr));
+		GGr = sortier(compress(GGr));
+
+		if(npars(R) != 0){
+			setring R;
+			module Gr = imap(PR,Gr);
+			module GGr = imap(PR,GGr);
+		}
+
+		list cgs_list;
+
+		module LM;
+		for(i=1;i<=ncols(GGr);i++){
+			LM = LM, leadmonom(GGr[i]);
+		}
+		LM = groebner(LM);
+
+		module Gm;
+		for(i=1;i<=ncols(LM);i++){
+			for(j=1;j<=ncols(GGr);j++){
+				if(LM[i] == leadmonom(GGr[j])){
+					Gm = Gm, GGr[j];
+					break;
+				}
+			}
+		}
+		Gm = compress(Gm);
+		attrib(Gm,"isSB",1);
+
+		ideal cofs;
+		for(i=1;i<=ncols(Gm);i++){
+			cofs = cofs, leadcoef(Gm[i]);
+		}
+		cofs = compress(cofs);
+
+		list lfac;
+		for(i=1;i<=ncols(cofs);i++){
+			if(!coef_is_nonzero(E,N,cofs[i])){
+				lfac = insert(lfac,cofs[i]);
+			}
+		}
+		int size_lfac = size(lfac);
+
+		setring PR;
+
+		if(not(defined(lfac))){
+			list lfac = list();
+		}
+		if(size_lfac != 0){
+			lfac = imap(R,lfac);
+		}
+		ideal ifac;
+		for(i=1;i<=size(lfac);i++){
+			ifac = ifac, factorize(lfac[i],1);
+		}
+		ifac = compress(ifac);
+
+		// ***************************************************************************** 
+		// TODO:
+		// Fing out which ordering is the best for ifac = sort(compress(ifac),"dp")[1]. 
+		// Previously, we also tried "ls" instead of "dp". 
+		// *****************************************************************************
+		ifac = sort(ifac,"dp")[1];
+		// ifac = sort_random(ifac);
+
+		setring R;
+		if(not(defined(ifac))){
+			ideal ifac;
+		}
+		ifac = imap(PR,ifac);
+
+		// removing repeated elements from ifac. 
+		list rfac;
+		int already_there;
+		for(i=1;i<=ncols(ifac);i++){
+			already_there = 0;
+			for(j=1;j<=size(rfac);j++){
+				if(ifac[i] == rfac[j]){
+					already_there = 1;
+					break;
+				}
+			}
+			if(!already_there && ifac[i] != 0){
+				rfac[size(rfac)+1] = ifac[i];
+			}
+		}
+
+		poly h = 1;
+		for(i=1;i<=size(rfac);i++){
+			h = h * rfac[i];
+		}
+		ideal hN = h * N;
+
+		// **** generic cases ****
+		if(!radical_membership_without_t(E,hN)){
+			// V(E)/V(hN) is consistent !
+			cgs_list = cgs_list + list(list(E,hN,Gm));
+		}
+		else{
+			// V(E)/V(hN) is inconsistent !
+		}
+
+		// **** non-generic cases ****
+		ideal hE;
+		hN = N;
+		for(i=1;i<=size(rfac);i++){
+			hE = E, rfac[i];
+			hE = compress(hE);
+			cgs_list = cgs_list + cgs_module_global(hE,hN,GGr);
+
+			hN = rfac[i] * hN;
+		}
+		return(cgs_list);
+	}
+}

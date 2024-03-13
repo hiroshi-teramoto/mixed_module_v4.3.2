@@ -1,0 +1,248 @@
+// this program is to reduce N by E
+proc reduce_poly(poly p, ideal E)
+{
+	if(p == 0 || p == 1){
+		return(p);
+	}
+	else{
+		ring R = basering;
+		poly pn = numerator(number(p));
+		poly pd = denominator(number(p));
+
+		def PR = par2varRing(list(ideal(pn,pd),E))[1];
+		setring PR;
+		poly pn = Id[1][1];
+		poly pd = Id[1][2];
+
+		if(not(defined(E))){
+			ideal E;
+		}
+		E = Id[2];
+
+		def PR'=changeord(list(list("dp",nvars(PR))),PR);
+		setring PR';	
+		ideal E = groebner(imap(PR,E));
+		poly pn = imap(PR,pn);
+		poly pd = imap(PR,pd);
+		pn = reduce(pn,E);
+		pd = reduce(pd,E);
+
+		setring R;
+
+		return(imap(PR',pn)/imap(PR',pd));
+	}
+}
+
+// normalizing polynomial p
+proc normalization(poly p)
+{
+	def R = basering;
+	def PR = par2varRing(ideal(p))[1];
+	setring PR;
+	if(not(defined(p))){
+		poly p;
+	}
+	p = normalize(Id[1][1]);
+
+	setring R;
+	return(imap(PR,p));
+}
+
+// gaussian elimination with pivot selection...
+// this procedure requires "check_zeros.lib";
+proc gauss_elimination(ideal E, ideal N, matrix A);
+{
+	if(radical_membership_without_t(E,N) != 1){
+		int i, j, k, l;
+		matrix Ac = A;
+
+		list ind;
+		for(i=1;i<=ncols(Ac);i++){
+			ind[size(ind)+1] = i;
+		}
+		list deleted_ind_kb;
+
+		// indices of independent vectors...
+		list list_independent;
+
+		int pivot;
+		int pivot_found;
+		poly may_be_nonzero;
+		for(i=1;i<=nrows(Ac);i++){
+			pivot_found = 0;
+			for(j=1;j<=size(ind);j++){
+				// if we find a nonzero element, we use it as a pivot.
+				may_be_nonzero = numerator(number(Ac[i,ind[j]]));
+				if(coef_is_nonzero(E,N,may_be_nonzero) == 1){
+					pivot = ind[j];
+					ind = delete(ind,j);
+					deleted_ind_kb[size(deleted_ind_kb)+1] = i;
+					list_independent[size(list_independent)+1] = i;
+					pivot_found = 1;
+					break;
+				}
+			}
+			if(pivot_found == 1){
+				// normalizing the row vector by the pivot value. 
+				for(j=1;j<=ncols(Ac);j++){
+					if(j != pivot){
+						Ac[i,j] = Ac[i,j] / Ac[i,pivot];
+					}
+				}
+				Ac[i,pivot] = 1;
+
+				// reduce the other rows using the pivot...
+				for(j=1;j<=nrows(Ac);j++){
+					if(j != i){
+						for(k=1;k<=ncols(Ac);k++){
+							if(k != pivot){
+								Ac[j,k] = Ac[j,k] - Ac[i,k] * Ac[j,pivot];
+							}
+						}
+						Ac[j,pivot] = 0;
+					}
+				}
+			}
+		}
+
+		list ind_kb;
+		int notin;
+		for(i=1;i<=nrows(Ac);i++){
+			notin = 1;
+			for(j=1;j<=size(deleted_ind_kb);j++){
+				if(i == deleted_ind_kb[j]){
+					notin = 0;
+					break;
+				}
+			}
+			if(notin){
+				ind_kb[size(ind_kb)+1] = i;
+			}
+		}
+
+		int ambiguous = 0;
+		if(size(ind) != 0 && size(ind_kb) != 0){
+			// in this case, the rank of the matrix A may depend on a parameter value...
+			for(i=1;i<=size(ind_kb);i++){
+				for(j=1;j<=size(ind);j++){
+					if(coef_is_zero(E,N,Ac[ind_kb[i],ind[j]]) == 0){
+						// parameter specification is not enough to determine the rank of the matrix...
+						poly may_be_zero = numerator(number(Ac[ind_kb[i],ind[j]]));
+						may_be_zero = normalization(may_be_zero);
+
+						// ****** may_be_zero != 0 case ******
+						matrix Acn = Ac;
+						// normalizing the row vector by the pivot value. 
+						for(k=1;k<=ncols(Acn);k++){
+							if(k != ind[j]){
+								Acn[ind_kb[i],k] = Acn[ind_kb[i],k] / Acn[ind_kb[i],ind[j]];
+							}
+						}
+						Acn[ind_kb[i],ind[j]] = 1;
+
+						// reduce the other rows using the pivot...
+						for(k=1;k<=nrows(Acn);k++){
+							if(k != ind_kb[i]){
+								for(l=1;l<=ncols(Acn);l++){
+									if(l != ind[j]){
+										Acn[k,l] = Acn[k,l] - Acn[ind_kb[i],l] * Acn[k,ind[j]];
+									}
+								}
+								Acn[k,ind[j]] = 0;
+							}
+						}
+						list L1 = gauss_elimination(E,N*may_be_zero,Acn);
+
+						// ******* may_be_zero == 0 case ******
+						Acn = Ac;
+						Acn[ind_kb[i],ind[j]] = 0;
+						ideal Em = E, may_be_zero;
+						list L2 = gauss_elimination(Em,N,Acn);
+
+						kill may_be_zero, Acn;
+						ambiguous = 1;
+						break;	
+					}
+					else{
+						Ac[ind_kb[i],ind[j]] = 0;
+					}
+				}
+				if(ambiguous == 1){
+					break;
+				}
+			}
+		}
+
+		if(ambiguous == 1){
+			return(L1 + L2);
+		}
+		else{
+			return(list(list(compress(E),N,Ac,sort(list_independent)[1])));
+		}
+	}
+	else{
+		return(list());
+	}
+}
+
+// gaussian elimination with cgs_module...
+proc gauss_elimination_gb(ideal E, ideal N, matrix A);
+{
+	ring R = basering;
+	int i, j;
+
+	list rl = ringlist(R);
+	int ipos;
+	int iord;
+	for(i=1;i<=size(rl[3]);i++){
+		if(rl[3][i][1] == "c" || rl[3][i][1] == "C"){
+			if(rl[3][i][1] == "C"){
+				rl[3][i][1] = "c";
+			}
+			ipos = i;
+		}
+		if(rl[3][i][1] == "M"){
+			iord = i;
+		}
+	}	
+	intmat imat[nvars(R)][nvars(R)];
+	for(i=1;i<=nvars(R);i++){
+		imat[1,i] = 1;
+	}
+	for(i=2;i<=nvars(R);i++){
+		imat[i,i-1] = -1;
+	}
+	rl[3][iord][2] = intvec(imat);
+
+	// POT
+	rl[3] = insert(rl[3],rl[3][ipos]);
+	rl[3] = delete(rl[3],size(rl[3]));
+
+	def Rg = ring(rl);
+	setring Rg;
+	ideal E = imap(R,E);
+	ideal N = imap(R,N);
+	matrix A = imap(R,A);
+
+	list Lgb = cgs_module_global(E,N,transpose(A));
+
+	list inds;
+	intvec e;
+
+	list Lout;
+	for(i=1;i<=size(Lgb);i++){
+		inds = list();
+		option(redSB);
+		Lgb[i][3] = groebner(Lgb[i][3]);
+		option(noredSB);
+		Lgb[i][3] = simplify(Lgb[i][3],1); // making the leading coefficients one
+
+		for(j=1;j<=size(Lgb[i][3]);j++){
+			e = leadexp(Lgb[i][3][j]);
+			inds = insert(inds,e[size(e)]);
+		}	
+		Lout = insert(Lout,list(Lgb[i][1],Lgb[i][2],transpose(matrix(Lgb[i][3])),inds));
+	}
+	setring R;
+	return(imap(Rg,Lout));
+}

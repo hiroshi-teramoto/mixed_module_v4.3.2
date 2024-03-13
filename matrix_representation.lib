@@ -1,0 +1,66 @@
+// represent E in kbases and returns the representation matrix
+proc matrix_representation(module E, module kb)
+{
+	int i, j;
+	vector v;
+	matrix A[ncols(E)][ncols(kb)];
+
+	int found = 0;
+	for(i=1;i<=ncols(E);i++){
+		v = E[i];
+		while(v != 0){
+			found = 0;
+			for(j=1;j<=ncols(kb);j++){
+				if(leadexp(v) == leadexp(kb[j])){
+					A[i,j] = leadcoef(v);
+					v = v - lead(v);
+					found = 1;	
+					break;
+				}
+			}
+			if(not(found)){
+				ERROR("matrix_representation: Elements in E should be represented by kbase!");
+			}
+		}
+	}
+	kill i,j,found;
+	kill v;
+
+	return(A);
+}
+
+// represent E in kbases and returns the representation matrix
+proc matrix_representation_normalize(module E, module kb)
+{
+	int i, j;
+	vector v;
+	matrix A[ncols(E)][ncols(kb)];
+
+	int found = 0;
+	for(i=1;i<=ncols(E);i++){
+		v = E[i];
+		while(v != 0){
+			found = 0;
+			for(j=1;j<=ncols(kb);j++){
+				if(leadexp(v) == leadexp(kb[j])){
+					A[i,j] = leadcoef(v);
+					v = v - lead(v);
+					found = 1;	
+					break;
+				}
+			}
+			if(not(found)){
+				ERROR("matrix_representation: Elements in E should be represented by kbase!");
+			}
+		}
+	}
+
+	module tA = module(transpose(A));
+	for(i=1;i<=ncols(tA);i++){
+		tA[i] = tA[i]*denominator(content(tA[i]));
+	}
+	kill i,j,found;
+	kill v;
+
+	return(transpose(matrix(tA)));
+}

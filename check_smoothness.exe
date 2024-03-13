@@ -1,0 +1,85 @@
+LIB "ring.lib";
+LIB "ainvar.lib";
+
+LIB "cssm_multi_v2.lib";
+LIB "combine_locally_closed.lib";
+LIB "simplify_constructible.lib";
+LIB "addcons.lib";
+LIB "gauss_elimination.lib";
+LIB "cgs.lib";
+LIB "check_zeros.lib";
+
+int i,j,k,l;
+intmat imat[1][1];
+imat[1,1] = -1;
+
+ring R = (0,c(1..4)), x, (M(imat),C);
+
+// #1
+// ideal E = c(1), c(2), c(3), c(4);
+// ideal N = 1;
+
+// #2
+// ideal E = 0;
+// ideal N = c(1)*c(4)-c(2)*c(3);
+
+// #3
+ideal E = c(1)*c(4)-c(2)*c(3);
+ideal N = c(2)*c(4), c(1)*c(4), c(1)*c(3);
+
+// #4
+// ideal E = c(2)*c(4), c(1)*c(4), c(2)*c(3), c(1)*c(3);
+// ideal N = c(1), c(2), c(3), c(4);
+
+// option(prot);
+def Rc = par2varRing(E)[1];
+setring(Rc);
+ideal E = imap(R,E);
+
+module dE;
+vector vi;
+for(i=nvars(R)+1;i<=nvars(Rc);i++){
+	vi = 0;
+	for(j=1;j<=size(E);j++){
+		vi = vi + diff(E[j],var(i))*gen(j);
+	}
+	dE = dE, vi;
+}
+dE = simplify(dE,2);
+
+setring(R);
+module dE = imap(Rc,dE);
+
+list L = gauss_elimination_gb(E,N,dE);
+
+list Lrank;
+for(i=1;i<=size(L);i++){
+	int thereis = 0;
+	int rk = size(L[i][4]);
+
+	for(j=1;j<=size(Lrank);j++){
+		if(rk == Lrank[j][1]){
+			thereis = 1;
+			Lrank[j][2] = insert(Lrank[j][2],list(L[i][1],L[i][2]));
+			break;
+		}
+	}
+	if(!thereis){
+		Lrank = insert(Lrank,list(rk,list(list(L[i][1],L[i][2]))));
+	}
+	kill thereis, rk;
+}
+
+for(i=1;i<=size(Lrank);i++){
+	Lrank[i][2] = addcons(Lrank[i][2]);
+	for(j=1;j<=size(Lrank[i][2]);j++){
+		Lrank[i][2][j][1] = radical_ideal(Lrank[i][2][j][1]);
+		Lrank[i][2][j][2] = reduction_by_ideal(Lrank[i][2][j][2],Lrank[i][2][j][1]);
+		Lrank[i][2][j][2] = radical_ideal(Lrank[i][2][j][2]);
+	}
+}
+
+print("Rank of the defining equations of E on V(E)\V(N)");
+Lrank;
+
+quit;

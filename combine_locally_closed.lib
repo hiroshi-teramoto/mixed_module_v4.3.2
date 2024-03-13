@@ -1,0 +1,35 @@
+// This program is to combine two constructible sets 
+// V(E1)\V(N1) and V(E2)\V(N2).
+// This program uses radical_membership_without_t.
+proc combine_locally_closed(ideal E1, ideal N1, ideal E2, ideal N2)
+{
+	// constructing E and N
+	ideal E = intersect(sat(E1,N1),sat(E2,N2));
+	ideal N = sat(E,intersect(E1,E2));
+	N = intersect(N,sat(E+E2+N2,E1));
+	N = intersect(N,sat(E+E1+N1,E2));
+	N = intersect(N,E+E1+N1+E2+N2);
+
+	// checking the three conditions: 
+	int combinable = 1;
+	if(!radical_membership_without_t(E+N+intersect(E1,E2),intersect(E+E1+N1,E+E2+N2))){
+		combinable = 0;
+		return(list(combinable,E,N));
+	}
+	else{
+		if(!radical_membership_without_t(E+N+E1+N1+E2,E+E2+N2)){
+			combinable = 0;
+			return(list(combinable,E,N));
+		}
+		else{
+			if(!radical_membership_without_t(E+N+E1+E2+N2,E+E1+N1)){
+				combinable = 0;
+				return(list(combinable,E,N));
+			}
+			else{
+				combinable = 1;
+				return(list(combinable,E,N));
+			}
+		}
+	}
+}
