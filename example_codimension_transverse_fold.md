@@ -74,21 +74,21 @@ Finally, you are ready to compute comprehensive standard system for $(M_i)_{i \i
 >  [i][4][j]: $S^{(j+1)}$ in the paper
 > ```
 
-The comprehensive mixed-standard system `Lg` can be used in the following functions implemented in cssm_multi_v2.lib:
+The comprehensive mixed-standard system `Lg` can be used in the following functions implemented in cssm_multi_std.lib:
 > ```Singular
-> reduce_mixed_with_E(list X, vector p, module Nc, list Q, ideal E)
+> reduce_mixed_with_E(list X, vector p, module Ns, list Q, ideal E)
 > ```
 > | Parameter | Description |
 > | --------- | ----------- |
 > | `X` | family of variables (Note that X[i-1] = $X_i$ in the paper) |
 > | `p` | input vector to be reduced |
-> | `Nc` | local cohomology of $M_1$ |
+> | `Ns` | standard basis of $M_1$ |
 > | `Q` | list of mixed standard basis $S^{(j+1)}$ for $j \ge 1$ |
-> | `E` | ideal in the polynomial ring of parameters (`Nc` and `Q` is defined on the parameter range $V(E) \setminus V(N)$ |
+> | `E` | ideal in the polynomial ring of parameters (`Ns` and `Q` is defined on the parameter range $V(E) \setminus V(N)$ |
 > #### Output
 > - the reduced normal form of `p`, that is, $\mathrm{NF} \_{\textnormal{tail}} \left( p \middle| \left( S^{\left( j \right)} \right)_{j \in J} \right)$ in the paper
 > #### Example
-> Suppose `p` is a vector you want to reduce by the comprehensive standard system of the $i$-th parameter range $V(E_i) \setminus V(N_i)$, that is, `Lg[i]`. You can compute that by the command `reduce_mixed_with_E(X,p,Lg[i][3][4],Lg[i][4],Lg[i][3][1])`.
+> Suppose `p` is a vector you want to reduce by the comprehensive standard system of the $i$-th parameter range $V(E_i) \setminus V(N_i)$, that is, `Lg[i]`. You can compute that by the command `reduce_mixed_with_E(X,p,Lg[i][3][3],Lg[i][4],Lg[i][3][1])`.
 
 > ```Singular
 > kbase_mixed(list X, list Lgi)
